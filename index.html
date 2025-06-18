@@ -12,41 +12,41 @@
             crossorigin=""></script>
 
     <style>
-        /* --- ESTILOS GENERALES Y LAYOUT (MODIFICADO) --- */
+        /* --- ESTILOS GENERALES Y LAYOUT (MODIFICADO A NEGRO) --- */
         body, html {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: #0d1117; /* Un negro menos puro, más moderno */
-            color: #c9d1d9; /* Un blanco menos estridente */
+            background-color: #000000; /* Fondo negro puro */
+            color: #e0e0e0; /* Un blanco menos estridente */
             overflow: hidden;
             display: flex;
             flex-direction: column;
         }
 
         #map {
-            height: 55vh; /* Un poco más de mapa */
+            height: 55vh;
             width: 100%;
-            background-color: #333;
+            background-color: #1a1a1a;
         }
 
         #controls {
-            height: 45vh; /* Un poco menos de controles */
+            height: 45vh;
             overflow-y: auto;
-            background-color: #161b22;
-            border-top: 1px solid #30363d;
+            background-color: #080808; /* Gris muy oscuro */
+            border-top: 1px solid #2a2a2a;
             display: flex;
             flex-direction: column;
         }
 
-        /* --- ESTILOS PARA SECCIONES COLAPSABLES (NUEVO) --- */
+        /* --- ESTILOS PARA SECCIONES COLAPSABLES --- */
         .accordion-header {
-            background-color: #21262d;
+            background-color: #111111; /* Gris oscuro */
             padding: 12px 15px;
             cursor: pointer;
-            border-bottom: 1px solid #30363d;
+            border-bottom: 1px solid #2a2a2a;
             font-weight: bold;
             font-size: 1.1em;
             display: flex;
@@ -55,26 +55,24 @@
             transition: background-color 0.2s ease;
         }
         .accordion-header:hover {
-            background-color: #30363d;
+            background-color: #222222;
         }
         .accordion-header::after {
-            content: '▼'; /* Flecha hacia abajo */
-            font-size: 0.8em;
-            transition: transform 0.3s ease;
+            content: '▼'; font-size: 0.8em; transition: transform 0.3s ease;
         }
         .accordion-header.active::after {
-            transform: rotate(180deg); /* Flecha hacia arriba */
+            transform: rotate(180deg);
         }
         .accordion-content {
             padding: 15px;
-            border-bottom: 1px solid #30363d;
-            display: none; /* Oculto por defecto */
+            border-bottom: 1px solid #2a2a2a;
+            display: none;
         }
         .accordion-content.active {
-            display: block; /* Se muestra al hacer clic */
+            display: block;
         }
 
-        /* --- ESTILOS DE FORMULARIOS Y BOTONES (MODIFICADO) --- */
+        /* --- ESTILOS DE FORMULARIOS Y BOTONES --- */
         h3, h4 {
             color: #FFFFFF;
             margin-top: 0;
@@ -92,9 +90,9 @@
             width: 100%;
             padding: 10px;
             margin-bottom: 12px;
-            background-color: #0d1117;
-            color: #c9d1d9;
-            border: 1px solid #30363d;
+            background-color: #000000;
+            color: #e0e0e0;
+            border: 1px solid #2a2a2a;
             border-radius: 6px;
             box-sizing: border-box;
             transition: border-color 0.2s, box-shadow 0.2s;
@@ -106,75 +104,51 @@
         }
 
         button {
-            padding: 10px 15px;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-right: 8px;
-            margin-bottom: 8px;
-            font-size: 0.9em;
-            font-weight: 500;
-            transition: background-color 0.2s ease, transform 0.1s ease;
+            padding: 10px 15px; color: white; border: none; border-radius: 6px;
+            cursor: pointer; margin-right: 8px; margin-bottom: 8px; font-size: 0.9em;
+            font-weight: 500; transition: background-color 0.2s ease, transform 0.1s ease;
         }
-        button:active {
-            transform: scale(0.98);
-        }
+        button:active { transform: scale(0.98); }
         .btn-primary { background-color: #4CAF50; } .btn-primary:hover { background-color: #45a049; }
         .btn-danger { background-color: #f44336; } .btn-danger:hover { background-color: #da190b; }
         .btn-secondary { background-color: #007bff; } .btn-secondary:hover { background-color: #0056b3; }
         .btn-info { background-color: #17a2b8; } .btn-info:hover { background-color: #117a8b; }
-        .btn-fullscreen { background-color: #6c757d; } .btn-fullscreen:hover { background-color: #5a6268; }
         .btn-block { display: block; width: 100%; margin-bottom: 10px; }
         .btn-sm { padding: 5px 10px; font-size: 0.8em; margin: 0 2px; }
 
-        /* --- PANEL DE SEGUIMIENTO (MODIFICADO) --- */
+        /* --- PANEL DE SEGUIMIENTO --- */
         #trackingDashboard {
             padding: 15px;
-            background-color: #0d1117;
-            border-bottom: 1px solid #30363d;
-            flex-grow: 1; /* Allow it to grow to fill space */
-            display: flex;
-            flex-direction: column;
+            background-color: #000000;
+            border-bottom: 1px solid #2a2a2a;
+            text-align: center;
         }
-        #trackingDashboard > div:not(#etaDebugPanel) { text-align: center; } /* Exclude debug panel from center align */
         #trackingInfoDisplay { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; }
         #timeDeviation { font-size: 3.5em; font-weight: bold; margin: 5px 0 15px 0; }
         #trackingDetails { display: flex; justify-content: space-around; font-size: 1em; }
 
-        /* --- LISTA DE PUNTOS INTERACTIVA (NUEVO) --- */
+        /* --- LISTA DE PUNTOS INTERACTIVA --- */
         #stopsList { max-height: 250px; overflow-y: auto; }
         .stop-item {
-            background-color: #21262d;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-radius: 6px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 4px solid transparent;
-            transition: background-color 0.2s ease;
+            background-color: #111111; padding: 10px; margin-bottom: 8px; border-radius: 6px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-left: 4px solid transparent; transition: background-color 0.2s ease;
         }
         .stop-item-info { flex-grow: 1; }
         .stop-item-actions { flex-shrink: 0; }
-        .stop-item:hover { background-color: #30363d; }
+        .stop-item:hover { background-color: #222222; }
         .stop-item.next-stop-highlight { background-color: #007bff; font-weight: bold; }
         .stop-item.line-endpoint-highlight { border-left-color: #ffc107; }
         .stop-item p { margin: 0; font-size: 0.8em; color: #8b949e; }
-        .stop-item p.stop-name { font-size: 1em; font-weight: bold; color: #c9d1d9; margin-bottom: 3px; }
+        .stop-item p.stop-name { font-size: 1em; font-weight: bold; color: #e0e0e0; margin-bottom: 3px; }
 
-        /* --- NUEVO: ESTILOS PARA LISTA DE PARADAS EN SEGUIMIENTO --- */
+        /* --- LISTA DE PARADAS EN SEGUIMIENTO --- */
         #trackingStopsListContainer {
-            margin-top: 20px;
-            text-align: left !important;
+            margin-top: 20px; text-align: left;
         }
         .tracking-stop-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 5px;
-            border-bottom: 1px solid #30363d;
-            font-size: 0.9em;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 5px; border-bottom: 1px solid #2a2a2a; font-size: 0.9em;
         }
         .tracking-stop-row:last-child { border-bottom: none; }
         .tracking-stop-row.is-next-stop { background-color: rgba(0, 123, 255, 0.15); font-weight: bold; }
@@ -182,18 +156,16 @@
         .tracking-stop-time { flex: 2; text-align: center; color: #8b949e; }
         .tracking-stop-eta { flex: 1.5; text-align: right; font-weight: bold; }
 
-        /* --- ESTILOS DE MARCADORES (SIN CAMBIOS) --- */
+        /* --- ESTILOS DE MARCADORES --- */
         .leaflet-div-icon { background: transparent; border: none; text-align: center; font-weight: bold; color: white; }
         .waypoint-marker-icon { background-color:#888888 !important; width: 10px !important; height: 10px !important; border-radius: 50% !important; border: 1px solid #FFFFFF !important; box-sizing: border-box !important; }
         .intermediate-stop-icon { background-color:#2196F3 !important; padding: 5px 8px !important; border-radius: 5px !important; color: white !important; font-size:12px !important; font-weight:bold !important; border: 1px solid white !important; min-width: 15px !important; text-align: center !important; }
         .user-location-icon { background-color: #007bff !important; border-radius: 50%; width: 16px !important; height: 16px !important; border: 2px solid white; box-shadow: 0 0 0 2px #007bff; }
         
-        /* --- ESTILOS PARA POPUP DE EDICIÓN (MODIFICADO) --- */
+        /* --- ESTILOS PARA POPUP DE EDICIÓN --- */
         .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-            background: #21262d;
-            color: #c9d1d9;
-            box-shadow: 0 3px 14px rgba(0,0,0,0.4);
-            border-radius: 6px;
+            background: #111111; color: #e0e0e0;
+            box-shadow: 0 3px 14px rgba(0,0,0,0.4); border-radius: 6px;
         }
         .leaflet-popup-content { margin: 15px; }
         .popup-form-field { margin-bottom: 10px; }
@@ -204,103 +176,97 @@
         .popup-form-field input { width: 100%; box-sizing: border-box; }
         .popup-actions { margin-top: 15px; text-align: right; }
 
-        /* NUEVO: Estilos para el panel de debug ETA */
+        /* --- Estilos para el panel de debug ETA --- */
         #etaDebugPanel {
-            background-color: #161b22;
-            padding: 10px;
-            margin: 10px 0px;
-            border: 1px solid #30363d;
-            border-radius: 6px;
-            font-size: 0.85em;
-            text-align: left;
-            max-height: 200px;
-            overflow-y: auto;
+            background-color: #080808; padding: 10px; margin: 10px 0px;
+            border: 1px solid #2a2a2a; border-radius: 6px; font-size: 0.85em;
+            text-align: left; max-height: 200px; overflow-y: auto;
         }
         #etaDebugPanel h4, #etaDebugPanel h5 {
-            color: #58a6ff;
-            margin-top: 5px;
-            margin-bottom: 5px;
-            padding-bottom: 3px;
-            border-bottom: 1px solid #30363d;
+            color: #58a6ff; margin-top: 5px; margin-bottom: 5px;
+            padding-bottom: 3px; border-bottom: 1px solid #2a2a2a;
         }
-        #etaDebugPanel p {
-            margin: 3px 0;
-            line-height: 1.4;
-        }
-        #etaDebugPanel hr {
-             border-color: #30363d; margin: 8px 0;
-        }
+        #etaDebugPanel p { margin: 3px 0; line-height: 1.4; }
+        #etaDebugPanel hr { border-color: #2a2a2a; margin: 8px 0; }
         
-        /* --- NUEVO: ESTILOS PARA MODO SEGUIMIENTO Y HORIZONTAL --- */
+        /* --- NUEVO: ESTILOS PARA VISTA HORIZONTAL EN SEGUIMIENTO --- */
+        #toggleMapLandscapeBtn { display: none; }
 
-        /* Clase aplicada al body durante el seguimiento */
-        body.tracking-active #mainControlsContainer { display: none; }
-        body.tracking-active #trackingDashboard { display: flex; } /* Changed from block to flex */
-
-        #toggleHorizontalMapBtn {
-            display: none; /* Oculto por defecto */
-        }
-        
-        @media (orientation: landscape) {
-            /* Cuando se está en seguimiento y en modo horizontal */
-            body.tracking-active {
+        @media screen and (orientation: landscape) {
+            body.is-tracking-landscape {
                 flex-direction: row;
             }
 
-            /* Por defecto, el mapa se oculta y los controles ocupan todo el ancho */
-            body.tracking-active #map {
-                display: none;
+            body.is-tracking-landscape #map {
                 height: 100vh;
-                width: 0;
-                flex-shrink: 0;
-                transition: width 0.3s ease-in-out;
-            }
-            body.tracking-active #controls {
-                width: 100%;
-                height: 100vh;
-                border-top: none;
-                transition: width 0.3s ease-in-out;
+                width: 0; /* Mapa oculto por defecto */
+                transition: width 0.4s ease-in-out;
             }
 
-            /* Centrar el contenido del dashboard de seguimiento */
-            body.tracking-active #trackingDashboard {
-                justify-content: center;
-                align-items: center;
-                text-align: center;
-                padding: 20px;
+            body.is-tracking-landscape.show-map-landscape #map {
+                width: 50vw; /* Mostrar mapa al 50% */
+            }
+
+            body.is-tracking-landscape #controls {
+                height: 100vh;
+                width: 100vw;
+                border-top: none;
+                border-left: 1px solid #2a2a2a;
+                transition: width 0.4s ease-in-out;
+            }
+            
+            body.is-tracking-landscape.show-map-landscape #controls {
+                width: 50vw;
+            }
+
+            body.is-tracking-landscape #trackingDashboard {
+                display: flex;
+                flex-direction: column;
+                justify-content: center; /* Centrar contenido verticalmente */
+                height: 100%;
+                padding: 2vw;
                 box-sizing: border-box;
             }
             
-            /* Contenedor principal del dashboard para limitar el ancho */
-            #tracking-content-wrapper {
-                 max-width: 600px;
-                 width: 100%;
+            body.is-tracking-landscape #trackingDashboard > div:first-of-type {
+                 flex-shrink: 0; /* No encoger el panel superior */
             }
 
-            /* Hacer el desvío horario GIGANTE */
-            body.tracking-active #timeDeviation {
-                font-size: 18vh;
-                line-height: 1;
-                margin: 15px 0;
+            body.is-tracking-landscape #timeDeviation {
+                font-size: 12vw; /* Mucho más grande */
+                margin-bottom: 4vh;
             }
 
-            /* El botón para mostrar/ocultar el mapa se hace visible */
-            #toggleHorizontalMapBtn {
-                display: block;
-                position: absolute;
-                bottom: 25px;
-                right: 25px;
-                z-index: 1000;
-                padding: 12px 20px;
+            body.is-tracking-landscape #trackingStopsListContainer {
+                flex-grow: 1; /* Ocupa el espacio restante */
+                display: flex;
+                flex-direction: column;
+                min-height: 0; /* Necesario para que flexbox funcione con overflow */
+            }
+
+            body.is-tracking-landscape #trackingStopsList {
+                flex-grow: 1;
+                overflow-y: auto;
             }
             
-            /* --- Estilos para la vista dividida --- */
-            body.tracking-active.split-view-active #map {
+            body.is-tracking-landscape #toggleMapLandscapeBtn {
                 display: block;
-                width: 50%;
+                position: fixed;
+                bottom: 25px;
+                right: 25px;
+                z-index: 1001; /* Encima de todo */
+                padding: 12px 18px;
+                font-size: 1.1em;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
             }
-            body.tracking-active.split-view-active #controls {
-                width: 50%;
+            
+            /* Ocultar botones de debug y navegación manual que no son primordiales */
+            body.is-tracking-landscape #toggleEtaDebugBtn,
+            body.is-tracking-landscape #manualNavContainer {
+                position: fixed;
+                bottom: 25px;
+                left: 25px;
+                z-index: 1001;
             }
         }
 
@@ -312,7 +278,7 @@
     <div id="controls">
         
         <div id="trackingDashboard" style="display: none;">
-            <div id="tracking-content-wrapper">
+            <div>
                 <div id="trackingInfoDisplay">Ruta en Progreso</div>
                 <div id="timeDeviation">00:00</div>
                 <div id="trackingDetails">
@@ -321,24 +287,25 @@
                 </div>
                 <div style="margin-top: 15px;">
                     <button id="stopTrackingBtn" onclick="stopTracking()" class="btn-danger btn-block">Detener Seguimiento</button>
-                    <div>
+                    <div id="manualNavContainer" style="margin-top: 5px;">
                       <input type="checkbox" id="manualStopNav" onchange="updateManualNavButtons()">
                       <label for="manualStopNav" style="display:inline;">Navegación Manual</label>
                       <button id="prevStopBtn" onclick="goToPreviousActivePoint()" class="btn-secondary btn-sm" style="display:none;">Anterior</button>
                       <button id="nextStopBtn" onclick="goToNextActivePoint()" class="btn-secondary btn-sm" style="display:none;">Siguiente</button>
                     </div>
                 </div>
-                
-                <div id="trackingStopsListContainer">
-                    <h4>Próximas Paradas y ETA</h4>
-                    <div id="trackingStopsList"></div>
-                </div>
-
-                <button id="toggleEtaDebugBtn" onclick="toggleEtaDebug()" class="btn-info btn-sm btn-block" style="margin-top: 15px;">🐛 Debug ETA</button>
-                <div id="etaDebugPanel" style="display: none;"></div>
             </div>
-            <!-- Botón para modo horizontal, se posiciona con CSS -->
-            <button id="toggleHorizontalMapBtn" onclick="toggleHorizontalSplitView()" class="btn-secondary">Ver Mapa</button>
+            
+            <div id="trackingStopsListContainer">
+                <h4>Próximas Paradas y ETA</h4>
+                <div id="trackingStopsList"></div>
+            </div>
+
+            <button id="toggleEtaDebugBtn" onclick="toggleEtaDebug()" class="btn-info btn-sm btn-block" style="margin-top: 15px;">🐛 Debug ETA</button>
+            <div id="etaDebugPanel" style="display: none;"></div>
+            
+            <!-- NUEVO: Botón para modo horizontal -->
+            <button id="toggleMapLandscapeBtn" onclick="toggleMapLandscapeView()" class="btn-secondary">🗺️ Mapa</button>
         </div>
 
         <div id="mainControlsContainer">
@@ -350,8 +317,7 @@
                 </p>
                 <button class="btn-info" onclick="toggleWaypointVisibility()">👁️ Ver/Ocultar Ptos. de Paso</button>
                 <button class="btn-danger" onclick="clearCurrentRoute()">🗑️ Limpiar Ruta Actual</button>
-                <button class="btn-fullscreen" onclick="toggleFullscreen()">⛶ Pantalla Completa</button>
-                <hr style="border-color: #30363d; margin: 15px 0;">
+                <hr style="border-color: #2a2a2a; margin: 15px 0;">
                 
                 <h3>Lista de Puntos de Ruta</h3>
                 <input type="checkbox" id="autoCalcTimes" checked onchange="calculateAndApplyAllIntermediateTimes()">
@@ -364,11 +330,13 @@
                 <label for="routeName">Nombre de la Ruta:</label>
                 <input type="text" id="routeName" placeholder="Ej: Ruta Centro">
                 <button onclick="saveRoute()" class="btn-primary">💾 Guardar Ruta</button>
-                <hr style="border-color: #30363d; margin: 20px 0;">
+                <hr style="border-color: #2a2a2a; margin: 20px 0;">
                 <label for="savedRoutes">Cargar Ruta Guardada:</label>
                 <select id="savedRoutes"></select>
                 <button onclick="loadRoute()" class="btn-secondary">Cargar</button>
                 <button onclick="deleteRoute()" class="btn-danger">Borrar</button>
+                <!-- NUEVO: Botón de pantalla completa -->
+                <button onclick="toggleFullScreen()" class="btn-info btn-block" style="margin-top: 15px;" id="fullscreenBtn">🖥️ Pantalla Completa</button>
             </div>
 
             <div class="accordion-header">3. Iniciar Seguimiento y Cola</div>
@@ -376,7 +344,7 @@
                 <h3>Iniciar Seguimiento</h3>
                 <p style="font-size: 0.85em; color: #8b949e;">Asegúrate de que la ruta actual tiene P. Inicio y P. Final con horarios definidos.</p>
                 <button id="startTrackingBtn" onclick="startTracking()" class="btn-primary btn-block">▶️ Iniciar Seguimiento</button>
-                <hr style="border-color: #30363d; margin: 20px 0;">
+                <hr style="border-color: #2a2a2a; margin: 20px 0;">
                 
                 <h3>Cola de Rutas</h3>
                 <label for="routeToQueue">Añadir ruta a la cola:</label>
@@ -387,11 +355,12 @@
                 <button onclick="clearRouteQueue()" class="btn-danger">Limpiar Cola</button>
             </div>
         </div>
+
     </div>
 
     <script>
         'use strict';
-        // --- VARIABLES GLOBALES (MODIFICADO) ---
+        // --- VARIABLES GLOBALES ---
         let map;
         let routePoints = [];
         let routeLineEdit;
@@ -404,19 +373,19 @@
         let currentStopRadius = 50;
         let currentRouteNameForTracking = "";
         let waypointsVisible = false;
-
-        // NUEVAS VARIABLES PARA SEGUIMIENTO MEJORADO
         let deviationDisplayIntervalId = null;
         let latestDeviationMillis = null;
         let isEtaDebugVisible = false;
         let lastDeviationCalculation = {};
+        let trackingState = { activeLegPoints: [] };
+        
+        // NUEVO: Estado para vista horizontal
+        let isMapVisibleInLandscape = false;
 
         const CACHE_PREFIX = 'smartMovePro_unidir_simple_route_';
         const ROUTE_QUEUE_CACHE_KEY = 'smartMovePro_unidir_simple_routeQueue';
 
-        let trackingState = { activeLegPoints: [] };
-
-        // --- FUNCIONES DE INICIALIZACIÓN Y UTILIDADES (MODIFICADO) ---
+        // --- FUNCIONES DE INICIALIZACIÓN Y UTILIDADES ---
         function generateUniqueId() { return Date.now().toString(36) + Math.random().toString(36).substring(2); }
 
         function createDivIcon(text, pointCategory = '', isStartPoint = false) {
@@ -443,7 +412,11 @@
 
         function initMap() {
             map = L.map('map').setView([-34.6037, -58.3816], 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
             
             map.on('click', onMapClick);
             
@@ -470,8 +443,7 @@
             updateStopsList();
         }
         
-        // --- LÓGICA DE EDICIÓN DE RUTA (COMPLETAMENTE REFACTORIZADA) ---
-
+        // --- LÓGICA DE EDICIÓN DE RUTA ---
         function onMapClick(e) {
             if (isTracking) return;
             if (map.dragging && map.dragging.moved()) return;
@@ -595,7 +567,7 @@
                                 <input type="datetime-local" id="popup_scheduledTime" value="${formatDateTimeForInput(timeValue)}">
                            </div>
                            <div>
-                                <input type="number" id="popup_scheduledSeconds" min="0" max="59" value="${secondsValue}" title="Segundos">
+                                <input type="number" id="popup_scheduledSeconds" min="0" max="59" value="${String(secondsValue).padStart(2, '0')}" title="Segundos">
                            </div>
                         </div>
                     </div>`;
@@ -632,7 +604,7 @@
                 }
 
                 if (dateVal) {
-                    dateVal.setSeconds(secondsValue, 0); // Establecer segundos y resetear milisegundos
+                    dateVal.setSeconds(secondsValue, 0);
                 }
                 
                 if (point.pointCategory === 'lineEndpoint') {
@@ -697,8 +669,7 @@
             });
         }
         
-        // --- LÓGICA DE LA LISTA DE PUNTOS (MODIFICADA A INTERACTIVA) ---
-
+        // --- LÓGICA DE LA LISTA DE PUNTOS INTERACTIVA ---
         function updateStopsList() {
             const listDiv = document.getElementById('stopsList');
             const displayPoints = getSortedRoutePointsForDisplay();
@@ -786,7 +757,6 @@
         }
         
         // --- LÓGICA DE SEGUIMIENTO (MODIFICADA PARA LA NUEVA UI) ---
-        
         function startTracking() {
             const startPoint = routePoints.find(p => p.pointCategory === 'lineEndpoint' && p.isStartPoint);
             const endPoint = routePoints.find(p => p.pointCategory === 'lineEndpoint' && !p.isStartPoint);
@@ -798,15 +768,17 @@
             if (document.getElementById('autoCalcTimes').checked) { calculateAndApplyAllIntermediateTimes(); }
 
             isTracking = true;
-            document.body.classList.add('tracking-active');
-            setTimeout(() => { if (map) map.invalidateSize(); }, 50);
-
             currentRouteNameForTracking = document.getElementById('routeName').value || "Ruta Actual";
 
             if (!setupCurrentLegForTracking()) {
                 stopTracking(false, "Error configurando ruta inicial.");
                 return;
             }
+            
+            document.getElementById('mainControlsContainer').style.display = 'none';
+            document.getElementById('trackingDashboard').style.display = 'block';
+            document.body.classList.add('is-tracking'); // NUEVO: Clase para control de layout
+            checkOrientationAndApplyLayout(); // NUEVO: Aplicar layout
             
             redrawRouteLine();
             if(waypointsVisible) toggleWaypointVisibility();
@@ -872,20 +844,22 @@
             highlightNextStopInList();
             updateManualNavButtons();
             updateTrackingStopsList();
-            if (isEtaDebugVisible) {
-                updateEtaDebugInfo();
-            }
+            if (isEtaDebugVisible) { updateEtaDebugInfo(); }
         }
 
         function stopTracking(completedNaturally = false, reason = "") {
-            document.body.classList.remove('tracking-active', 'split-view-active');
-            setTimeout(() => { if(map) map.invalidateSize(); }, 50);
-
             if (trackingIntervalId) navigator.geolocation.clearWatch(trackingIntervalId);
             if (deviationDisplayIntervalId) clearInterval(deviationDisplayIntervalId);
             trackingIntervalId = null; deviationDisplayIntervalId = null; isTracking = false; lastKnownPosition = null;
             
+            document.getElementById('mainControlsContainer').style.display = 'block';
+            document.getElementById('trackingDashboard').style.display = 'none';
             document.getElementById('trackingStopsList').innerHTML = '';
+
+            // NUEVO: Limpiar clases de layout
+            document.body.classList.remove('is-tracking', 'is-tracking-landscape', 'show-map-landscape');
+            isMapVisibleInLandscape = false;
+            setTimeout(() => map.invalidateSize(), 10);
 
             if (isEtaDebugVisible) {
                 const debugPanel = document.getElementById('etaDebugPanel');
@@ -913,7 +887,6 @@
         }
         
         // --- RESTO DE FUNCIONES ---
-        
         function getPathPointsForPolyline() {
             const allPointsSorted = [...routePoints].sort((a, b) => a.originalIndex - b.originalIndex);
             if (allPointsSorted.length < 1) return [];
@@ -1022,9 +995,9 @@
             if (polylinePathPoints.length > 1) {
                 const latlngs = polylinePathPoints.map(p => [p.lat, p.lng]);
                 if (isTracking) {
-                    trackingRouteLine = L.polyline(latlngs, {color: 'green', weight: 7, opacity: 0.8}).addTo(map);
+                    trackingRouteLine = L.polyline(latlngs, {color: '#4CAF50', weight: 7, opacity: 0.8}).addTo(map);
                 } else {
-                    routeLineEdit = L.polyline(latlngs, {color: 'purple', weight: 5, dashArray: '5, 5'}).addTo(map);
+                    routeLineEdit = L.polyline(latlngs, {color: '#9370DB', weight: 5, dashArray: '5, 5'}).addTo(map);
                 }
             }
         }
@@ -1108,7 +1081,7 @@
             });
             if (!hasRoutes) {
                  const option = document.createElement('option'); option.textContent = "No hay rutas guardadas"; option.disabled = true;
-                 savedRoutesSelect.appendChild(option.clone NUEVOde(true)); routeToQueueSelect.appendChild(option);
+                 savedRoutesSelect.appendChild(option.cloneNode(true)); routeToQueueSelect.appendChild(option);
             }
             updateRouteQueueDisplay();
         }
@@ -1175,9 +1148,7 @@
                 highlightNextStopInList(); 
                 updateManualNavButtons();
                 updateTrackingStopsList();
-                if (isEtaDebugVisible) {
-                    updateEtaDebugInfo();
-                }
+                if (isEtaDebugVisible) { updateEtaDebugInfo(); }
             }
         }
         function advanceToNextActivePoint() {
@@ -1321,28 +1292,25 @@
                     if (segmentLength >= 1.0) {
                         const distUserToP1 = currentUserLatLng.distanceTo(p1);
                         const distUserToP2 = currentUserLatLng.distanceTo(p2);
-                        currentProgressOnSegment = (Math.pow(segmentLength, 2) + Math.pow(distUserToP1, 2) - Math.pow(distUserToP2, 2)) / (2 * segmentLength);
-
-                        if (currentProgressOnSegment < 0) {
-                            currentDistanceOffTrace = distUserToP1;
-                        } else if (currentProgressOnSegment > segmentLength) {
-                            currentDistanceOffTrace = distUserToP2;
-                        } else {
-                            currentDistanceOffTrace = Math.sqrt(Math.max(0, Math.pow(distUserToP1, 2) - Math.pow(currentProgressOnSegment, 2)));
-                        }
+                        const dot = ( (currentUserLatLng.lat - p1.lat) * (p2.lat - p1.lat) + (currentUserLatLng.lng - p1.lng) * (p2.lng - p1.lng) );
+                        const projLength = segmentLength * segmentLength;
+                        const t = Math.max(0, Math.min(1, dot / projLength));
+                        const projection = L.latLng(p1.lat + t * (p2.lat - p1.lat), p1.lng + t * (p2.lng - p1.lng));
+                        currentDistanceOffTrace = currentUserLatLng.distanceTo(projection);
+                        currentProgressOnSegment = p1.distanceTo(projection);
                     } else {
                         currentDistanceOffTrace = currentUserLatLng.distanceTo(p1);
                     }
                     
                     if (currentDistanceOffTrace < minDistanceOffTrace) {
                         minDistanceOffTrace = currentDistanceOffTrace;
-                        finalProgressAlongTrace = distanceAccumulatedOnTrace + Math.max(0, Math.min(currentProgressOnSegment, segmentLength));
+                        finalProgressAlongTrace = distanceAccumulatedOnTrace + currentProgressOnSegment;
                     }
                     distanceAccumulatedOnTrace += segmentLength;
                 }
 
                 progressPercentage = finalProgressAlongTrace / totalSegmentDistanceAlongTrace;
-                progressPercentage = Math.max(0, Math.min(progressPercentage, 1)); // Clamp
+                progressPercentage = Math.max(0, Math.min(progressPercentage, 1));
 
                 lastDeviationCalculation.totalSegmentDistance = totalSegmentDistanceAlongTrace;
                 lastDeviationCalculation.progressDistance = finalProgressAlongTrace;
@@ -1353,16 +1321,16 @@
             latestDeviationMillis = expectedTimeAtCurrentPosition - currentTime;
             lastDeviationCalculation.deviation = latestDeviationMillis;
         }
-
+        
         function updateDeviationDisplay() {
             if (!isTracking) {
                 document.getElementById('timeDeviation').textContent = "00:00";
-                document.getElementById('timeDeviation').style.color = "#c9d1d9";
+                document.getElementById('timeDeviation').style.color = "#e0e0e0";
                 return;
             }
             if (latestDeviationMillis === null) {
                 document.getElementById('timeDeviation').textContent = "Calculando...";
-                document.getElementById('timeDeviation').style.color = "#c9d1d9";
+                document.getElementById('timeDeviation').style.color = "#e0e0e0";
                 return;
             }
             displayDeviation(latestDeviationMillis);
@@ -1377,7 +1345,7 @@
             deviationDiv.textContent = formattedDeviation;
             if (deviationMillis > 59999) deviationDiv.style.color = "#3fb950"; // Adelantado (verde)
             else if (deviationMillis < -59999) deviationDiv.style.color = "#f85149"; // Atrasado (rojo)
-            else deviationDiv.style.color = "#c9d1d9"; // En tiempo
+            else deviationDiv.style.color = "#e0e0e0"; // En tiempo
         }
 
         function updateTrackingStopsList() {
@@ -1412,42 +1380,28 @@
                     const timeRemainingMillis = scheduledMillis - nowMillis;
                     
                     let etaMillis;
+                    if (isWaitingAtStartPoint && deviationMillis > 0) etaMillis = timeRemainingMillis;
+                    else etaMillis = timeRemainingMillis - deviationMillis;
 
-                    if (isWaitingAtStartPoint && deviationMillis > 0) {
-                        etaMillis = timeRemainingMillis;
-                    } else {
-                        etaMillis = timeRemainingMillis - deviationMillis;
-                    }
-
-                    if (etaMillis < 0) {
-                        etaMillis = 0; 
-                    }
+                    if (etaMillis < 0) etaMillis = 0; 
                     
-                    if (etaMillis < 60000) {
-                        etaString = "ARRIBANDO";
-                    } else {
-                        const etaMinutes = Math.floor(etaMillis / (1000 * 60));
-                        etaString = `${etaMinutes} min.`;
-                    }
+                    if (etaMillis < 60000) etaString = "ARRIBANDO";
+                    else etaString = `${Math.round(etaMillis / 60000)} min.`;
                 }
                 
                 let rowClass = "tracking-stop-row";
-                if(nextStopInfo.point && nextStopInfo.point.id === point.id) {
-                    rowClass += " is-next-stop";
-                }
+                if(nextStopInfo.point && nextStopInfo.point.id === point.id) rowClass += " is-next-stop";
 
-                html += `
-                    <div class="${rowClass}">
+                html += `<div class="${rowClass}">
                         <span class="tracking-stop-name">${point.name}</span>
                         <span class="tracking-stop-time">${formatTime(point.effectiveScheduledTime, false)}</span>
                         <span class="tracking-stop-eta">${etaString}</span>
-                    </div>
-                `;
+                    </div>`;
             });
             listDiv.innerHTML = html;
         }
 
-        // --- FUNCIONES PARA DEBUG, PANTALLA COMPLETA Y LAYOUT HORIZONTAL ---
+        // --- FUNCIONES PARA DEBUG ETA ---
         function formatMillisToMMSS(millis) {
             if (millis === null || typeof millis === 'undefined' || isNaN(millis)) return "N/A";
             const totalSeconds = Math.floor(Math.abs(millis) / 1000);
@@ -1464,18 +1418,16 @@
             if (isEtaDebugVisible) {
                 debugPanel.style.display = 'block';
                 debugBtn.textContent = '🐛 Ocultar Debug ETA';
-                debugBtn.classList.remove('btn-info');
-                debugBtn.classList.add('btn-secondary');
+                debugBtn.classList.remove('btn-info'); debugBtn.classList.add('btn-secondary');
                 updateEtaDebugInfo(); 
             } else {
                 debugPanel.style.display = 'none';
                 debugBtn.textContent = '🐛 Debug ETA';
-                debugBtn.classList.remove('btn-secondary');
-                debugBtn.classList.add('btn-info');
+                debugBtn.classList.remove('btn-secondary'); debugBtn.classList.add('btn-info');
                 debugPanel.innerHTML = ''; 
             }
         }
-        
+
         function updateEtaDebugInfo() {
             if (!isEtaDebugVisible || !isTracking) {
                 const debugPanel = document.getElementById('etaDebugPanel');
@@ -1488,8 +1440,7 @@
             const nowMillis = new Date().getTime();
             const deviationMillisForCalc = latestDeviationMillis === null ? 0 : latestDeviationMillis;
 
-            debugHtml += `<p><strong>Hora Actual (ms):</strong> ${nowMillis}</p>`;
-            debugHtml += `<p><strong>Desvío Actual (ms):</strong> ${latestDeviationMillis === null ? 'N/A (calculando)' : latestDeviationMillis} (${formatMillisToMMSS(latestDeviationMillis)})</p>`;
+            debugHtml += `<p><strong>Desvío Actual (ms):</strong> ${latestDeviationMillis === null ? 'N/A' : latestDeviationMillis} (${formatMillisToMMSS(latestDeviationMillis)})</p>`;
             debugHtml += `<p><strong>Índice Punto Actual:</strong> ${currentSegmentStartIndex}</p>`;
             
             debugHtml += `<hr><h4>Cálculo de Progreso</h4>`;
@@ -1518,27 +1469,20 @@
             const displayPoints = trackingState.activeLegPoints.filter(p => p.pointCategory !== 'waypoint');
             if (displayPoints.length === 0) {
                 debugHtml += "<p>No hay puntos de parada para mostrar detalles.</p>";
-                debugPanel.innerHTML = debugHtml;
-                return;
+                debugPanel.innerHTML = debugHtml; return;
             }
 
             displayPoints.forEach(point => {
                 const pointIndexInFullPath = trackingState.activeLegPoints.findIndex(p => p.id === point.id);
                 const isPassed = pointIndexInFullPath <= currentSegmentStartIndex;
-
                 debugHtml += `<h5>Punto: ${point.name} (Pasado: ${isPassed})</h5>`;
-                
                 if (point.effectiveScheduledTime) {
                     const scheduledMillis = new Date(point.effectiveScheduledTime).getTime();
                     debugHtml += `<p style="margin-left: 10px;">Hora Prog.: ${formatTime(point.effectiveScheduledTime, false)}</p>`;
-
                     if (!isPassed) {
                         const timeRemainingMillis = scheduledMillis - nowMillis;
                         debugHtml += `<p style="margin-left: 10px;">T. Rest. Prog.: ${formatMillisToMMSS(timeRemainingMillis)}</p>`;
-                        
-                        let etaMillisDebug;
-                        let reason = "";
-
+                        let etaMillisDebug; let reason = "";
                         if (isWaitingAtStartPointDebug && deviationMillisForCalc > 0) {
                              etaMillisDebug = timeRemainingMillis;
                              reason = `<em>Caso: Esperando en P.Inicio (adelantado). ETA = T. Rest. Prog.</em>`;
@@ -1547,50 +1491,13 @@
                             reason = `<em>Caso: Normal. ETA = T. Rest. Prog. - Desvío</em>`;
                         }
                         debugHtml += `<p style="margin-left: 10px;">${reason}</p>`;
-
                         if (etaMillisDebug < 0) etaMillisDebug = 0;
                         debugHtml += `<p style="margin-left: 10px; font-weight: bold;">ETA Calculado: ${formatMillisToMMSS(etaMillisDebug)}</p>`;
                     }
-                } else {
-                    debugHtml += `<p style="margin-left: 10px;">Sin Hora Prog. Efectiva</p>`;
-                }
+                } else { debugHtml += `<p style="margin-left: 10px;">Sin Hora Prog. Efectiva</p>`; }
             });
-
             debugPanel.innerHTML = debugHtml;
         }
-
-        function toggleFullscreen() {
-            const elem = document.documentElement;
-            const btn = document.querySelector('.btn-fullscreen');
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (elem.requestFullscreen) { elem.requestFullscreen(); } 
-                else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
-                if(btn) btn.textContent = '⛶ Salir';
-            } else {
-                if (document.exitFullscreen) { document.exitFullscreen(); } 
-                else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
-                if(btn) btn.textContent = '⛶ Pantalla Completa';
-            }
-        }
-        
-        function toggleHorizontalSplitView() {
-            const body = document.body;
-            const btn = document.getElementById('toggleHorizontalMapBtn');
-            body.classList.toggle('split-view-active');
-
-            if (body.classList.contains('split-view-active')) {
-                btn.textContent = 'Ocultar Mapa';
-            } else {
-                btn.textContent = 'Ver Mapa';
-            }
-
-            // Dar tiempo a que la transición CSS se complete antes de invalidar el tamaño del mapa
-            setTimeout(() => {
-                if (map) { map.invalidateSize(); }
-            }, 350);
-        }
-
-        // --- FUNCIONES RESTANTES ---
 
         function handleGeolocationError(error) {
             console.error("Error de geolocalización: ", error); alert(`Error de geolocalización: ${error.message}.`);
@@ -1630,7 +1537,65 @@
             }
         }
         
-        document.addEventListener('DOMContentLoaded', () => { initMap(); loadSavedRoutesLists(); updateStopsList(); updateManualNavButtons(); });
+        // --- NUEVO: FUNCIONES DE PANTALLA COMPLETA Y LAYOUT HORIZONTAL ---
+        function toggleFullScreen() {
+            const elem = document.documentElement;
+            const btn = document.getElementById('fullscreenBtn');
+            if (!document.fullscreenElement) {
+                elem.requestFullscreen().catch(err => {
+                    alert(`Error: ${err.message} (${err.name})`);
+                });
+            } else if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+
+        function checkOrientationAndApplyLayout() {
+            if (isTracking) {
+                const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+                if (isLandscape) {
+                    document.body.classList.add('is-tracking-landscape');
+                } else {
+                    document.body.classList.remove('is-tracking-landscape', 'show-map-landscape');
+                    isMapVisibleInLandscape = false;
+                    document.getElementById('toggleMapLandscapeBtn').textContent = '🗺️ Mapa';
+                }
+                // Invalidar tamaño del mapa para forzar su redibujado
+                setTimeout(() => { if (map) map.invalidateSize() }, 450);
+            }
+        }
+        
+        function toggleMapLandscapeView() {
+            isMapVisibleInLandscape = !isMapVisibleInLandscape;
+            const btn = document.getElementById('toggleMapLandscapeBtn');
+            if (isMapVisibleInLandscape) {
+                document.body.classList.add('show-map-landscape');
+                btn.textContent = '📊 Panel';
+            } else {
+                document.body.classList.remove('show-map-landscape');
+                btn.textContent = '🗺️ Mapa';
+            }
+            setTimeout(() => { if (map) map.invalidateSize() }, 450);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            loadSavedRoutesLists();
+            updateStopsList();
+            updateManualNavButtons();
+
+            // NUEVO: Listeners para layout y pantalla completa
+            window.addEventListener('resize', checkOrientationAndApplyLayout);
+            window.addEventListener('orientationchange', checkOrientationAndApplyLayout);
+            document.addEventListener('fullscreenchange', () => {
+                const btn = document.getElementById('fullscreenBtn');
+                if (!document.fullscreenElement) {
+                    btn.textContent = '🖥️ Pantalla Completa';
+                } else {
+                    btn.textContent = '🖥️ Salir de Pantalla Completa';
+                }
+            });
+        });
 
     </script>
 </body>
