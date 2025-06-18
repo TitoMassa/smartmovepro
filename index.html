@@ -124,6 +124,7 @@
         .btn-danger { background-color: #f44336; } .btn-danger:hover { background-color: #da190b; }
         .btn-secondary { background-color: #007bff; } .btn-secondary:hover { background-color: #0056b3; }
         .btn-info { background-color: #17a2b8; } .btn-info:hover { background-color: #117a8b; }
+        .btn-fullscreen { background-color: #6c757d; } .btn-fullscreen:hover { background-color: #5a6268; }
         .btn-block { display: block; width: 100%; margin-bottom: 10px; }
         .btn-sm { padding: 5px 10px; font-size: 0.8em; margin: 0 2px; }
 
@@ -132,6 +133,9 @@
             padding: 15px;
             background-color: #0d1117;
             border-bottom: 1px solid #30363d;
+            flex-grow: 1; /* Allow it to grow to fill space */
+            display: flex;
+            flex-direction: column;
         }
         #trackingDashboard > div:not(#etaDebugPanel) { text-align: center; } /* Exclude debug panel from center align */
         #trackingInfoDisplay { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; }
@@ -202,18 +206,18 @@
 
         /* NUEVO: Estilos para el panel de debug ETA */
         #etaDebugPanel {
-            background-color: #161b22; /* Slightly different from accordion content for distinction */
+            background-color: #161b22;
             padding: 10px;
-            margin: 10px 0px; /* Adjusted margin */
+            margin: 10px 0px;
             border: 1px solid #30363d;
             border-radius: 6px;
-            font-size: 0.85em; /* Slightly larger for readability */
+            font-size: 0.85em;
             text-align: left;
-            max-height: 200px; /* Increased max-height */
+            max-height: 200px;
             overflow-y: auto;
         }
         #etaDebugPanel h4, #etaDebugPanel h5 {
-            color: #58a6ff; /* A lighter blue for headers */
+            color: #58a6ff;
             margin-top: 5px;
             margin-bottom: 5px;
             padding-bottom: 3px;
@@ -226,6 +230,79 @@
         #etaDebugPanel hr {
              border-color: #30363d; margin: 8px 0;
         }
+        
+        /* --- NUEVO: ESTILOS PARA MODO SEGUIMIENTO Y HORIZONTAL --- */
+
+        /* Clase aplicada al body durante el seguimiento */
+        body.tracking-active #mainControlsContainer { display: none; }
+        body.tracking-active #trackingDashboard { display: flex; } /* Changed from block to flex */
+
+        #toggleHorizontalMapBtn {
+            display: none; /* Oculto por defecto */
+        }
+        
+        @media (orientation: landscape) {
+            /* Cuando se está en seguimiento y en modo horizontal */
+            body.tracking-active {
+                flex-direction: row;
+            }
+
+            /* Por defecto, el mapa se oculta y los controles ocupan todo el ancho */
+            body.tracking-active #map {
+                display: none;
+                height: 100vh;
+                width: 0;
+                flex-shrink: 0;
+                transition: width 0.3s ease-in-out;
+            }
+            body.tracking-active #controls {
+                width: 100%;
+                height: 100vh;
+                border-top: none;
+                transition: width 0.3s ease-in-out;
+            }
+
+            /* Centrar el contenido del dashboard de seguimiento */
+            body.tracking-active #trackingDashboard {
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                padding: 20px;
+                box-sizing: border-box;
+            }
+            
+            /* Contenedor principal del dashboard para limitar el ancho */
+            #tracking-content-wrapper {
+                 max-width: 600px;
+                 width: 100%;
+            }
+
+            /* Hacer el desvío horario GIGANTE */
+            body.tracking-active #timeDeviation {
+                font-size: 18vh;
+                line-height: 1;
+                margin: 15px 0;
+            }
+
+            /* El botón para mostrar/ocultar el mapa se hace visible */
+            #toggleHorizontalMapBtn {
+                display: block;
+                position: absolute;
+                bottom: 25px;
+                right: 25px;
+                z-index: 1000;
+                padding: 12px 20px;
+            }
+            
+            /* --- Estilos para la vista dividida --- */
+            body.tracking-active.split-view-active #map {
+                display: block;
+                width: 50%;
+            }
+            body.tracking-active.split-view-active #controls {
+                width: 50%;
+            }
+        }
 
     </style>
 </head>
@@ -234,9 +311,8 @@
     <div id="map"></div>
     <div id="controls">
         
-        <!-- MODIFICADO: Dashboard de seguimiento, se muestra cuando isTracking = true -->
         <div id="trackingDashboard" style="display: none;">
-            <div>
+            <div id="tracking-content-wrapper">
                 <div id="trackingInfoDisplay">Ruta en Progreso</div>
                 <div id="timeDeviation">00:00</div>
                 <div id="trackingDetails">
@@ -252,26 +328,20 @@
                       <button id="nextStopBtn" onclick="goToNextActivePoint()" class="btn-secondary btn-sm" style="display:none;">Siguiente</button>
                     </div>
                 </div>
-            </div>
-            
-            <!-- NUEVO: Lista de paradas y ETAs durante el seguimiento -->
-            <div id="trackingStopsListContainer">
-                <h4>Próximas Paradas y ETA</h4>
-                <div id="trackingStopsList">
-                    <!-- El contenido se generará con JavaScript -->
+                
+                <div id="trackingStopsListContainer">
+                    <h4>Próximas Paradas y ETA</h4>
+                    <div id="trackingStopsList"></div>
                 </div>
-            </div>
 
-            <!-- NUEVO: Botón y panel de Debug ETA -->
-            <button id="toggleEtaDebugBtn" onclick="toggleEtaDebug()" class="btn-info btn-sm btn-block" style="margin-top: 15px;">🐛 Debug ETA</button>
-            <div id="etaDebugPanel" style="display: none;">
-                <!-- El contenido de debug se generará con JavaScript -->
+                <button id="toggleEtaDebugBtn" onclick="toggleEtaDebug()" class="btn-info btn-sm btn-block" style="margin-top: 15px;">🐛 Debug ETA</button>
+                <div id="etaDebugPanel" style="display: none;"></div>
             </div>
+            <!-- Botón para modo horizontal, se posiciona con CSS -->
+            <button id="toggleHorizontalMapBtn" onclick="toggleHorizontalSplitView()" class="btn-secondary">Ver Mapa</button>
         </div>
 
-        <!-- NUEVO: Contenedor para los acordeones, se oculta durante el seguimiento -->
         <div id="mainControlsContainer">
-            <!-- SECCIÓN 1: Edición de Ruta -->
             <div class="accordion-header active">1. Editar Ruta Actual</div>
             <div class="accordion-content active">
                 <p style="font-size: 0.85em; margin-top: 0; color: #8b949e;">
@@ -280,6 +350,7 @@
                 </p>
                 <button class="btn-info" onclick="toggleWaypointVisibility()">👁️ Ver/Ocultar Ptos. de Paso</button>
                 <button class="btn-danger" onclick="clearCurrentRoute()">🗑️ Limpiar Ruta Actual</button>
+                <button class="btn-fullscreen" onclick="toggleFullscreen()">⛶ Pantalla Completa</button>
                 <hr style="border-color: #30363d; margin: 15px 0;">
                 
                 <h3>Lista de Puntos de Ruta</h3>
@@ -288,7 +359,6 @@
                 <div id="stopsList" style="margin-top: 10px;">No hay puntos definidos.</div>
             </div>
 
-            <!-- SECCIÓN 2: Guardar y Cargar -->
             <div class="accordion-header">2. Guardar y Cargar Rutas</div>
             <div class="accordion-content">
                 <label for="routeName">Nombre de la Ruta:</label>
@@ -301,7 +371,6 @@
                 <button onclick="deleteRoute()" class="btn-danger">Borrar</button>
             </div>
 
-            <!-- SECCIÓN 3: Seguimiento y Cola -->
             <div class="accordion-header">3. Iniciar Seguimiento y Cola</div>
             <div class="accordion-content">
                 <h3>Iniciar Seguimiento</h3>
@@ -318,7 +387,6 @@
                 <button onclick="clearRouteQueue()" class="btn-danger">Limpiar Cola</button>
             </div>
         </div>
-
     </div>
 
     <script>
@@ -338,10 +406,10 @@
         let waypointsVisible = false;
 
         // NUEVAS VARIABLES PARA SEGUIMIENTO MEJORADO
-        let deviationDisplayIntervalId = null; // Para actualizar la UI del desvío
-        let latestDeviationMillis = null;    // Para almacenar el último cálculo de desvío
-        let isEtaDebugVisible = false; // NUEVO: Para el panel de debug ETA
-        let lastDeviationCalculation = {}; // NUEVO: Para almacenar detalles del cálculo para el debug
+        let deviationDisplayIntervalId = null;
+        let latestDeviationMillis = null;
+        let isEtaDebugVisible = false;
+        let lastDeviationCalculation = {};
 
         const CACHE_PREFIX = 'smartMovePro_unidir_simple_route_';
         const ROUTE_QUEUE_CACHE_KEY = 'smartMovePro_unidir_simple_routeQueue';
@@ -730,6 +798,9 @@
             if (document.getElementById('autoCalcTimes').checked) { calculateAndApplyAllIntermediateTimes(); }
 
             isTracking = true;
+            document.body.classList.add('tracking-active');
+            setTimeout(() => { if (map) map.invalidateSize(); }, 50);
+
             currentRouteNameForTracking = document.getElementById('routeName').value || "Ruta Actual";
 
             if (!setupCurrentLegForTracking()) {
@@ -737,9 +808,6 @@
                 return;
             }
             
-            document.getElementById('mainControlsContainer').style.display = 'none';
-            document.getElementById('trackingDashboard').style.display = 'block';
-
             redrawRouteLine();
             if(waypointsVisible) toggleWaypointVisibility();
 
@@ -799,26 +867,26 @@
             deviationDisplayIntervalId = setInterval(updateDeviationDisplay, 5000);
 
             if (lastKnownPosition) calculateTimeDeviation(lastKnownPosition);
-            updateDeviationDisplay(); // Primera actualización inmediata
+            updateDeviationDisplay();
 
             highlightNextStopInList();
             updateManualNavButtons();
             updateTrackingStopsList();
-            if (isEtaDebugVisible) { // NUEVO: Actualizar debug si está visible
+            if (isEtaDebugVisible) {
                 updateEtaDebugInfo();
             }
         }
 
         function stopTracking(completedNaturally = false, reason = "") {
+            document.body.classList.remove('tracking-active', 'split-view-active');
+            setTimeout(() => { if(map) map.invalidateSize(); }, 50);
+
             if (trackingIntervalId) navigator.geolocation.clearWatch(trackingIntervalId);
             if (deviationDisplayIntervalId) clearInterval(deviationDisplayIntervalId);
             trackingIntervalId = null; deviationDisplayIntervalId = null; isTracking = false; lastKnownPosition = null;
             
-            document.getElementById('mainControlsContainer').style.display = 'block';
-            document.getElementById('trackingDashboard').style.display = 'none';
-            document.getElementById('trackingStopsList').innerHTML = ''; // Limpiar la lista de ETAs
+            document.getElementById('trackingStopsList').innerHTML = '';
 
-            // NUEVO: Resetear panel de debug ETA
             if (isEtaDebugVisible) {
                 const debugPanel = document.getElementById('etaDebugPanel');
                 const debugBtn = document.getElementById('toggleEtaDebugBtn');
@@ -962,7 +1030,6 @@
         }
         function getSortedRoutePointsForDisplay() { return [...routePoints].sort((a, b) => a.originalIndex - b.originalIndex).filter(p => p.pointCategory !== 'waypoint'); }
         
-        // MODIFICADO: formatTime ahora muestra segundos
         function formatTime(dateObj, includeDate = false) {
             if (!dateObj || isNaN(new Date(dateObj).getTime())) return "N/A";
             let timeStr = new Date(dateObj).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -1041,7 +1108,7 @@
             });
             if (!hasRoutes) {
                  const option = document.createElement('option'); option.textContent = "No hay rutas guardadas"; option.disabled = true;
-                 savedRoutesSelect.appendChild(option.cloneNode(true)); routeToQueueSelect.appendChild(option);
+                 savedRoutesSelect.appendChild(option.clone NUEVOde(true)); routeToQueueSelect.appendChild(option);
             }
             updateRouteQueueDisplay();
         }
@@ -1108,7 +1175,7 @@
                 highlightNextStopInList(); 
                 updateManualNavButtons();
                 updateTrackingStopsList();
-                if (isEtaDebugVisible) { // NUEVO: Actualizar debug si está visible
+                if (isEtaDebugVisible) {
                     updateEtaDebugInfo();
                 }
             }
@@ -1128,7 +1195,6 @@
             let prevStopIndex = -1;
             for (let i = currentSegmentStartIndex - 1; i >= 0; i--) {
                 if (trackingState.activeLegPoints[i].pointCategory !== 'waypoint') {
-                    // Queremos el índice del punto *anterior* a la parada encontrada
                     let targetIndex = -1;
                     for (let j = i - 1; j >= 0; j--) {
                         if (trackingState.activeLegPoints[j].pointCategory !== 'waypoint') {
@@ -1145,7 +1211,7 @@
 
             if (lastKnownPosition) calculateTimeDeviation(lastKnownPosition);
             highlightNextStopInList(); updateManualNavButtons(); updateTrackingStopsList();
-            if (isEtaDebugVisible) updateEtaDebugInfo(); // NUEVO
+            if (isEtaDebugVisible) updateEtaDebugInfo();
         }
         function goToNextActivePoint() {
             if (!isTracking || !trackingState.activeLegPoints || currentSegmentStartIndex >= trackingState.activeLegPoints.length -1 ) return;
@@ -1155,13 +1221,12 @@
                 highlightNextStopInList(); 
                 updateManualNavButtons(); 
                 updateTrackingStopsList();
-                if (isEtaDebugVisible) updateEtaDebugInfo(); // NUEVO
+                if (isEtaDebugVisible) updateEtaDebugInfo();
             }
         }
 
-        // MODIFICADO: Cálculo de desvío basado en la traza completa del segmento
         function calculateTimeDeviation(currentUserGeoPosition) {
-            lastDeviationCalculation = {}; // Reset debug info
+            lastDeviationCalculation = {};
 
             if (!isTracking || !trackingState.activeLegPoints || trackingState.activeLegPoints.length === 0 || !currentUserGeoPosition) {
                 latestDeviationMillis = null;
@@ -1289,7 +1354,6 @@
             lastDeviationCalculation.deviation = latestDeviationMillis;
         }
 
-        // NUEVA FUNCIÓN: Actualiza el display del desvío
         function updateDeviationDisplay() {
             if (!isTracking) {
                 document.getElementById('timeDeviation').textContent = "00:00";
@@ -1316,7 +1380,6 @@
             else deviationDiv.style.color = "#c9d1d9"; // En tiempo
         }
 
-        // FUNCIÓN CORREGIDA: Actualiza la lista de paradas y ETAs en el panel de seguimiento
         function updateTrackingStopsList() {
             if (!isTracking) return;
             const listDiv = document.getElementById('trackingStopsList');
@@ -1384,7 +1447,7 @@
             listDiv.innerHTML = html;
         }
 
-        // --- NUEVAS FUNCIONES PARA DEBUG ETA ---
+        // --- FUNCIONES PARA DEBUG, PANTALLA COMPLETA Y LAYOUT HORIZONTAL ---
         function formatMillisToMMSS(millis) {
             if (millis === null || typeof millis === 'undefined' || isNaN(millis)) return "N/A";
             const totalSeconds = Math.floor(Math.abs(millis) / 1000);
@@ -1412,8 +1475,7 @@
                 debugPanel.innerHTML = ''; 
             }
         }
-
-        // MODIFICADO: Muestra detalles del cálculo de progreso
+        
         function updateEtaDebugInfo() {
             if (!isEtaDebugVisible || !isTracking) {
                 const debugPanel = document.getElementById('etaDebugPanel');
@@ -1430,7 +1492,6 @@
             debugHtml += `<p><strong>Desvío Actual (ms):</strong> ${latestDeviationMillis === null ? 'N/A (calculando)' : latestDeviationMillis} (${formatMillisToMMSS(latestDeviationMillis)})</p>`;
             debugHtml += `<p><strong>Índice Punto Actual:</strong> ${currentSegmentStartIndex}</p>`;
             
-            // --- NUEVO BLOQUE DE DEBUG DE PROGRESO ---
             debugHtml += `<hr><h4>Cálculo de Progreso</h4>`;
             if (lastDeviationCalculation && lastDeviationCalculation.progressPercentage !== undefined) {
                 debugHtml += `<p><strong>Segmento Lógico:</strong> ${lastDeviationCalculation.pointA || 'N/A'} → ${lastDeviationCalculation.pointB || 'N/A'}</p>`;
@@ -1498,6 +1559,38 @@
             debugPanel.innerHTML = debugHtml;
         }
 
+        function toggleFullscreen() {
+            const elem = document.documentElement;
+            const btn = document.querySelector('.btn-fullscreen');
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (elem.requestFullscreen) { elem.requestFullscreen(); } 
+                else if (elem.webkitRequestFullscreen) { elem.webkitRequestFullscreen(); }
+                if(btn) btn.textContent = '⛶ Salir';
+            } else {
+                if (document.exitFullscreen) { document.exitFullscreen(); } 
+                else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
+                if(btn) btn.textContent = '⛶ Pantalla Completa';
+            }
+        }
+        
+        function toggleHorizontalSplitView() {
+            const body = document.body;
+            const btn = document.getElementById('toggleHorizontalMapBtn');
+            body.classList.toggle('split-view-active');
+
+            if (body.classList.contains('split-view-active')) {
+                btn.textContent = 'Ocultar Mapa';
+            } else {
+                btn.textContent = 'Ver Mapa';
+            }
+
+            // Dar tiempo a que la transición CSS se complete antes de invalidar el tamaño del mapa
+            setTimeout(() => {
+                if (map) { map.invalidateSize(); }
+            }, 350);
+        }
+
+        // --- FUNCIONES RESTANTES ---
 
         function handleGeolocationError(error) {
             console.error("Error de geolocalización: ", error); alert(`Error de geolocalización: ${error.message}.`);
