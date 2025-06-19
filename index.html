@@ -1196,6 +1196,7 @@
             }
         }
 
+        // --- CORRECCIÓN IMPLEMENTADA AQUÍ ---
         function calculateTimeDeviation(currentUserGeoPosition) {
             lastDeviationCalculation = {};
 
@@ -1209,16 +1210,28 @@
             const legPoints = trackingState.activeLegPoints;
             let pointA = null, pointB = null;
 
+            // Encontrar punto A (última parada no-waypoint con horario)
             for (let i = currentSegmentStartIndex; i >= 0; i--) {
-                if (legPoints[i].pointCategory !== 'waypoint' && legPoints[i].effectiveScheduledTime) { pointA = legPoints[i]; break; }
+                if (legPoints[i].pointCategory !== 'waypoint' && legPoints[i].effectiveScheduledTime) {
+                    pointA = legPoints[i];
+                    break;
+                }
             }
-            if (!pointA && legPoints[0] && legPoints[0].pointCategory !== 'waypoint' && legPoints[0].effectiveScheduledTime) { pointA = legPoints[0]; }
+            if (!pointA && legPoints[0] && legPoints[0].pointCategory !== 'waypoint' && legPoints[0].effectiveScheduledTime) {
+                pointA = legPoints[0];
+            }
             
+            // Encontrar punto B (próxima parada no-waypoint con horario)
             for (let i = currentSegmentStartIndex + 1; i < legPoints.length; i++) {
-                if (legPoints[i].pointCategory !== 'waypoint' && legPoints[i].effectiveScheduledTime) { pointB = legPoints[i]; break; }
+                if (legPoints[i].pointCategory !== 'waypoint' && legPoints[i].effectiveScheduledTime) {
+                    pointB = legPoints[i];
+                    break;
+                }
             }
             if (!pointB && legPoints[legPoints.length - 1] && legPoints[legPoints.length - 1].pointCategory !== 'waypoint' && legPoints[legPoints.length - 1].effectiveScheduledTime) {
-                if (!pointA || pointA.id !== legPoints[legPoints.length - 1].id) { pointB = legPoints[legPoints.length - 1]; }
+                if (!pointA || pointA.id !== legPoints[legPoints.length - 1].id) {
+                    pointB = legPoints[legPoints.length - 1];
+                }
             }
 
             if (!pointA || !pointB) {
@@ -1229,7 +1242,9 @@
                 } else if (pointB && pointB.effectiveScheduledTime) {
                     latestDeviationMillis = new Date(pointB.effectiveScheduledTime).getTime() - currentTime;
                     reason = `Solo se encontró el punto B (${pointB.name}). Desvío respecto a su hora.`;
-                } else { latestDeviationMillis = null; }
+                } else {
+                    latestDeviationMillis = null;
+                }
                 lastDeviationCalculation = { deviation: latestDeviationMillis, reason: reason, pointA: pointA?.name, pointB: pointB?.name };
                 return;
             }
@@ -1247,81 +1262,58 @@
             const timeB = new Date(pointB.effectiveScheduledTime).getTime();
             const segmentTotalScheduledMillis = timeB - timeA;
 
-            if (segmentTotalScheduledMillis < 0) {
+            if (segmentTotalScheduledMillis <= 0) {
+                // Si el segmento tiene duración negativa o cero, usar la hora de B como referencia.
                 latestDeviationMillis = timeB - currentTime;
-                lastDeviationCalculation = { deviation: latestDeviationMillis, reason: "El segmento tiene duración negativa. Usando hora de B.", ...lastDeviationCalculation };
+                const reason = segmentTotalScheduledMillis < 0 ? "El segmento tiene duración negativa. Usando hora de B." : "El segmento tiene duración cero. Usando hora de A/B.";
+                lastDeviationCalculation = { deviation: latestDeviationMillis, reason: reason, ...lastDeviationCalculation };
                 return;
-            }
-            if (segmentTotalScheduledMillis === 0) {
-                latestDeviationMillis = timeA - currentTime;
-                lastDeviationCalculation = { deviation: latestDeviationMillis, reason: "El segmento tiene duración cero. Usando hora de A.", ...lastDeviationCalculation };
-                return;
-            }
-
-            const startIndex = legPoints.findIndex(p => p.id === pointA.id);
-            const endIndex = legPoints.findIndex(p => p.id === pointB.id);
-            const segmentPathPoints = legPoints.slice(startIndex, endIndex + 1);
-
-            let totalSegmentDistanceAlongTrace = 0;
-            const subSegmentLengths = [];
-            for (let i = 0; i < segmentPathPoints.length - 1; i++) {
-                const dist = L.latLng(segmentPathPoints[i].lat, segmentPathPoints[i].lng).distanceTo(L.latLng(segmentPathPoints[i+1].lat, segmentPathPoints[i+1].lng));
-                totalSegmentDistanceAlongTrace += dist;
-                subSegmentLengths.push(dist);
             }
             
+            const userLatLng = L.latLng(currentUserGeoPosition.coords.latitude, currentUserGeoPosition.coords.longitude);
+            const pointALatLng = L.latLng(pointA.lat, pointA.lng);
+            const pointBLatLng = L.latLng(pointB.lat, pointB.lng);
+
+            const segmentTotalDistance = pointALatLng.distanceTo(pointBLatLng);
             let progressPercentage;
 
-            if (totalSegmentDistanceAlongTrace < 1.0) {
-                progressPercentage = 0.0;
-                lastDeviationCalculation.reason = "Distancia del segmento en la traza es casi cero.";
+            if (segmentTotalDistance < 1.0) {
+                // Si el segmento es muy corto, estimar progreso basado en la cercanía al punto final.
+                // Una heurística simple: si está más cerca de B que de A, se asume 100%, si no 0%.
+                progressPercentage = userLatLng.distanceTo(pointALatLng) < userLatLng.distanceTo(pointBLatLng) ? 0.0 : 1.0;
+                lastDeviationCalculation.reason = "Distancia del segmento A-B casi cero. Estimando progreso.";
             } else {
-                const currentUserLatLng = L.latLng(currentUserGeoPosition.coords.latitude, currentUserGeoPosition.coords.longitude);
-                let minDistanceOffTrace = Infinity;
-                let finalProgressAlongTrace = 0;
-                let distanceAccumulatedOnTrace = 0;
+                // Cálculo de proyección del punto de usuario sobre el segmento A-B
+                // Usamos coordenadas (lng, lat) como (x, y) para el producto punto
+                const pA_x = pointALatLng.lng; const pA_y = pointALatLng.lat;
+                const pB_x = pointBLatLng.lng; const pB_y = pointBLatLng.lat;
+                const user_x = userLatLng.lng; const user_y = userLatLng.lat;
 
-                for (let i = 0; i < segmentPathPoints.length - 1; i++) {
-                    const p1 = L.latLng(segmentPathPoints[i].lat, segmentPathPoints[i].lng);
-                    const p2 = L.latLng(segmentPathPoints[i+1].lat, segmentPathPoints[i+1].lng);
-                    const segmentLength = subSegmentLengths[i];
-                    
-                    let currentDistanceOffTrace;
-                    let currentProgressOnSegment = 0;
+                const d_ab_x = pB_x - pA_x;
+                const d_ab_y = pB_y - pA_y;
+                const d_au_x = user_x - pA_x;
+                const d_au_y = user_y - pA_y;
 
-                    if (segmentLength >= 1.0) {
-                        const distUserToP1 = currentUserLatLng.distanceTo(p1);
-                        const distUserToP2 = currentUserLatLng.distanceTo(p2);
-                        const dot = ( (currentUserLatLng.lat - p1.lat) * (p2.lat - p1.lat) + (currentUserLatLng.lng - p1.lng) * (p2.lng - p1.lng) );
-                        const projLength = segmentLength * segmentLength;
-                        const t = Math.max(0, Math.min(1, dot / projLength));
-                        const projection = L.latLng(p1.lat + t * (p2.lat - p1.lat), p1.lng + t * (p2.lng - p1.lng));
-                        currentDistanceOffTrace = currentUserLatLng.distanceTo(projection);
-                        currentProgressOnSegment = p1.distanceTo(projection);
-                    } else {
-                        currentDistanceOffTrace = currentUserLatLng.distanceTo(p1);
-                    }
-                    
-                    if (currentDistanceOffTrace < minDistanceOffTrace) {
-                        minDistanceOffTrace = currentDistanceOffTrace;
-                        finalProgressAlongTrace = distanceAccumulatedOnTrace + currentProgressOnSegment;
-                    }
-                    distanceAccumulatedOnTrace += segmentLength;
-                }
+                const dot = d_au_x * d_ab_x + d_au_y * d_ab_y;
+                const len_sq = d_ab_x * d_ab_x + d_ab_y * d_ab_y;
+                
+                const t = len_sq !== 0 ? dot / len_sq : -1;
 
-                progressPercentage = finalProgressAlongTrace / totalSegmentDistanceAlongTrace;
-                progressPercentage = Math.max(0, Math.min(progressPercentage, 1));
+                // Limitar t entre 0 y 1 para que el progreso esté siempre dentro del segmento
+                progressPercentage = Math.max(0, Math.min(1, t));
 
-                lastDeviationCalculation.totalSegmentDistance = totalSegmentDistanceAlongTrace;
-                lastDeviationCalculation.progressDistance = finalProgressAlongTrace;
+                lastDeviationCalculation.reason = "Proyección directa sobre segmento A-B.";
+                lastDeviationCalculation.projectionFactor_t = t;
             }
             
+            lastDeviationCalculation.segmentTotalDistance = segmentTotalDistance;
             lastDeviationCalculation.progressPercentage = progressPercentage;
+
             const expectedTimeAtCurrentPosition = timeA + (segmentTotalScheduledMillis * progressPercentage);
             latestDeviationMillis = expectedTimeAtCurrentPosition - currentTime;
             lastDeviationCalculation.deviation = latestDeviationMillis;
         }
-        
+
         function updateDeviationDisplay() {
             if (!isTracking) {
                 document.getElementById('timeDeviation').textContent = "00:00";
@@ -1440,14 +1432,17 @@
             const nowMillis = new Date().getTime();
             const deviationMillisForCalc = latestDeviationMillis === null ? 0 : latestDeviationMillis;
 
-            debugHtml += `<p><strong>Desvío Actual (ms):</strong> ${latestDeviationMillis === null ? 'N/A' : latestDeviationMillis} (${formatMillisToMMSS(latestDeviationMillis)})</p>`;
+            debugHtml += `<p><strong>Desvío Actual (ms):</strong> ${latestDeviationMillis === null ? 'N/A' : latestDeviationMillis.toFixed(0)} (${formatMillisToMMSS(latestDeviationMillis)})</p>`;
             debugHtml += `<p><strong>Índice Punto Actual:</strong> ${currentSegmentStartIndex}</p>`;
             
-            debugHtml += `<hr><h4>Cálculo de Progreso</h4>`;
+            debugHtml += `<hr><h4>Cálculo de Progreso (Nuevo)</h4>`;
             if (lastDeviationCalculation && lastDeviationCalculation.progressPercentage !== undefined) {
                 debugHtml += `<p><strong>Segmento Lógico:</strong> ${lastDeviationCalculation.pointA || 'N/A'} → ${lastDeviationCalculation.pointB || 'N/A'}</p>`;
-                debugHtml += `<p><strong>Distancia Total (traza):</strong> ${lastDeviationCalculation.totalSegmentDistance?.toFixed(0) || 'N/A'} m</p>`;
-                debugHtml += `<p><strong>Progreso en Traza:</strong> ${lastDeviationCalculation.progressDistance?.toFixed(0) || 'N/A'} m</p>`;
+                debugHtml += `<p><strong>Método:</strong> ${lastDeviationCalculation.reason || 'N/A'}</p>`;
+                debugHtml += `<p><strong>Distancia A-B (recta):</strong> ${lastDeviationCalculation.segmentTotalDistance?.toFixed(0) || 'N/A'} m</p>`;
+                if (lastDeviationCalculation.projectionFactor_t !== undefined) {
+                    debugHtml += `<p><strong>Factor Proyección (t):</strong> ${lastDeviationCalculation.projectionFactor_t.toFixed(4)}</p>`;
+                }
                 debugHtml += `<p style="font-weight: bold;">Porcentaje Recorrido: ${(lastDeviationCalculation.progressPercentage * 100).toFixed(1)} %</p>`;
             } else {
                 debugHtml += `<p><em>${lastDeviationCalculation.reason || 'Esperando datos de cálculo de progreso...'}</em></p>`;
