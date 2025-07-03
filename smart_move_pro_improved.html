@@ -1,0 +1,2326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Smart Move Pro - Seguimiento de Rutas Profesional</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- VARIABLES CSS PARA DISEÑO CONSISTENTE --- */
+        :root {
+            /* Colores principales */
+            --color-primary: #2563eb;
+            --color-primary-hover: #1d4ed8;
+            --color-secondary: #10b981;
+            --color-secondary-hover: #059669;
+            --color-accent: #f59e0b;
+            --color-accent-hover: #d97706;
+            --color-danger: #ef4444;
+            --color-danger-hover: #dc2626;
+            
+            /* Fondos */
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-surface: #334155;
+            --bg-surface-hover: #475569;
+            --bg-card: #1e293b;
+            --bg-input: #334155;
+            
+            /* Textos */
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            
+            /* Bordes */
+            --border-color: #475569;
+            --border-color-light: #64748b;
+            
+            /* Espaciado */
+            --spacing-xs: 0.5rem;
+            --spacing-sm: 0.75rem;
+            --spacing-md: 1rem;
+            --spacing-lg: 1.5rem;
+            --spacing-xl: 2rem;
+            --spacing-2xl: 3rem;
+            
+            /* Bordes redondeados */
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            
+            /* Sombras */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            
+            /* Transiciones */
+            --transition-fast: 150ms ease-in-out;
+            --transition-normal: 250ms ease-in-out;
+            --transition-slow: 350ms ease-in-out;
+        }
+
+        /* --- ESTILOS GENERALES Y LAYOUT --- */
+        * {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        #map {
+            height: 55vh;
+            width: 100%;
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+
+        #controls {
+            height: 45vh;
+            overflow-y: auto;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) transparent;
+        }
+
+        #controls::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #controls::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #controls::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: var(--radius-sm);
+        }
+
+        /* --- ESTILOS PARA SECCIONES COLAPSABLES --- */
+        .accordion-header {
+            background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-secondary) 100%);
+            padding: var(--spacing-lg);
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .accordion-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+            opacity: 0;
+            transition: opacity var(--transition-normal);
+            z-index: 0;
+        }
+
+        .accordion-header:hover::before {
+            opacity: 0.1;
+        }
+
+        .accordion-header > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .accordion-header::after {
+            content: '▼';
+            font-size: 0.75rem;
+            transition: transform var(--transition-normal);
+            color: var(--color-primary);
+            font-weight: 700;
+        }
+
+        .accordion-header.active::after {
+            transform: rotate(180deg);
+        }
+
+        .accordion-content {
+            padding: var(--spacing-lg);
+            border-bottom: 1px solid var(--border-color);
+            display: none;
+            background: var(--bg-card);
+        }
+
+        .accordion-content.active {
+            display: block;
+            animation: slideDown var(--transition-normal) ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* --- ESTILOS DE FORMULARIOS Y BOTONES --- */
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--text-primary);
+            margin: 0 0 var(--spacing-md) 0;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        h1 { font-size: 2.5rem; font-weight: 700; }
+        h2 { font-size: 2rem; }
+        h3 { font-size: 1.5rem; }
+        h4 { font-size: 1.25rem; }
+
+        label {
+            display: block;
+            margin-bottom: var(--spacing-xs);
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        input[type="text"], 
+        input[type="datetime-local"], 
+        input[type="number"], 
+        select {
+            width: 100%;
+            padding: var(--spacing-sm) var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            transition: all var(--transition-normal);
+            font-family: inherit;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            background: var(--bg-secondary);
+        }
+
+        input:hover, select:hover {
+            border-color: var(--border-color-light);
+        }
+
+        /* --- BOTONES MEJORADOS --- */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-sm) var(--spacing-md);
+            font-size: 0.875rem;
+            font-weight: 500;
+            font-family: inherit;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+            min-height: 44px; /* Touch target */
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+
+        .btn:hover::before {
+            opacity: 1;
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--color-primary) 0%, #3b82f6 100%);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, var(--color-primary-hover) 0%, var(--color-primary) 100%);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, var(--color-secondary) 0%, #34d399 100%);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, var(--color-secondary-hover) 0%, var(--color-secondary) 100%);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--color-danger) 0%, #f87171 100%);
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, var(--color-danger-hover) 0%, var(--color-danger) 100%);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-accent {
+            background: linear-gradient(135deg, var(--color-accent) 0%, #fbbf24 100%);
+            color: var(--bg-primary);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-accent:hover {
+            background: linear-gradient(135deg, var(--color-accent-hover) 0%, var(--color-accent) 100%);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-secondary);
+            border: 2px solid var(--border-color);
+        }
+
+        .btn-outline:hover {
+            background: var(--bg-surface);
+            border-color: var(--color-primary);
+            color: var(--text-primary);
+        }
+
+        .btn-block {
+            display: flex;
+            width: 100%;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .btn-sm {
+            padding: var(--spacing-xs) var(--spacing-sm);
+            font-size: 0.75rem;
+            min-height: 36px;
+        }
+
+        .btn-lg {
+            padding: var(--spacing-md) var(--spacing-xl);
+            font-size: 1rem;
+            min-height: 52px;
+        }
+
+        /* --- PANEL DE SEGUIMIENTO MEJORADO --- */
+        #trackingDashboard {
+            padding: var(--spacing-xl);
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+            position: relative;
+        }
+
+        #trackingDashboard::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        #trackingDashboard > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        #trackingInfoDisplay {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+            color: var(--color-primary);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        #timeDeviation {
+            font-size: 4rem;
+            font-weight: 700;
+            margin: var(--spacing-md) 0 var(--spacing-lg) 0;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--color-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+        }
+
+        #trackingDetails {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+            font-size: 0.875rem;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .tracking-detail-item {
+            background: var(--bg-surface);
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            transition: all var(--transition-normal);
+        }
+
+        .tracking-detail-item:hover {
+            background: var(--bg-surface-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* --- LISTA DE PUNTOS INTERACTIVA MEJORADA --- */
+        #stopsList {
+            max-height: 300px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) transparent;
+        }
+
+        #stopsList::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #stopsList::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #stopsList::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: var(--radius-sm);
+        }
+
+        .stop-item {
+            background: var(--bg-surface);
+            padding: var(--spacing-md);
+            margin-bottom: var(--spacing-sm);
+            border-radius: var(--radius-lg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid transparent;
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stop-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--color-primary);
+            transform: scaleY(0);
+            transition: transform var(--transition-normal);
+        }
+
+        .stop-item:hover {
+            background: var(--bg-surface-hover);
+            transform: translateX(8px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stop-item:hover::before {
+            transform: scaleY(1);
+        }
+
+        .stop-item-info {
+            flex-grow: 1;
+        }
+
+        .stop-item-actions {
+            flex-shrink: 0;
+            display: flex;
+            gap: var(--spacing-xs);
+        }
+
+        .stop-item.next-stop-highlight {
+            background: linear-gradient(135deg, var(--color-primary) 0%, #3b82f6 100%);
+            color: white;
+            font-weight: 600;
+            box-shadow: var(--shadow-lg);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .stop-item.line-endpoint-highlight::before {
+            background: var(--color-accent);
+            transform: scaleY(1);
+        }
+
+        .stop-item p {
+            margin: 0;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .stop-item p.stop-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .stop-item.next-stop-highlight p,
+        .stop-item.next-stop-highlight p.stop-name {
+            color: white;
+        }
+
+        /* --- LISTA DE PARADAS EN SEGUIMIENTO MEJORADA --- */
+        #trackingStopsListContainer {
+            margin-top: var(--spacing-lg);
+            text-align: left;
+        }
+
+        .tracking-stop-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: var(--spacing-sm);
+            align-items: center;
+            padding: var(--spacing-sm) var(--spacing-md);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.875rem;
+            transition: all var(--transition-normal);
+            border-radius: var(--radius-sm);
+            margin-bottom: 2px;
+        }
+
+        .tracking-stop-row:last-child {
+            border-bottom: none;
+        }
+
+        .tracking-stop-row:hover {
+            background: var(--bg-surface);
+            transform: translateX(4px);
+        }
+
+        .tracking-stop-row.is-next-stop {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
+            font-weight: 600;
+            border: 1px solid var(--color-primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .tracking-stop-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .tracking-stop-time {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .tracking-stop-eta {
+            text-align: right;
+            font-weight: 600;
+            color: var(--color-secondary);
+        }
+
+        /* --- ESTILOS DE MARCADORES MEJORADOS --- */
+        .leaflet-div-icon {
+            background: transparent !important;
+            border: none !important;
+            text-align: center;
+            font-weight: 600;
+            color: white;
+        }
+
+        .waypoint-marker-icon {
+            background: var(--bg-surface) !important;
+            width: 12px !important;
+            height: 12px !important;
+            border-radius: 50% !important;
+            border: 2px solid var(--text-primary) !important;
+            box-shadow: var(--shadow-md) !important;
+        }
+
+        .intermediate-stop-icon {
+            background: linear-gradient(135deg, var(--color-primary) 0%, #3b82f6 100%) !important;
+            padding: var(--spacing-xs) var(--spacing-sm) !important;
+            border-radius: var(--radius-md) !important;
+            color: white !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            border: 2px solid white !important;
+            min-width: 20px !important;
+            text-align: center !important;
+            box-shadow: var(--shadow-lg) !important;
+        }
+
+        .user-location-icon {
+            background: linear-gradient(135deg, var(--color-secondary) 0%, #34d399 100%) !important;
+            border-radius: 50% !important;
+            width: 18px !important;
+            height: 18px !important;
+            border: 3px solid white !important;
+            box-shadow: 0 0 0 3px var(--color-secondary), var(--shadow-lg) !important;
+            animation: locationPulse 2s infinite;
+        }
+
+        @keyframes locationPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* --- ESTILOS PARA POPUP DE EDICIÓN MEJORADOS --- */
+        .leaflet-popup-content-wrapper,
+        .leaflet-popup-tip {
+            background: var(--bg-card) !important;
+            color: var(--text-primary) !important;
+            box-shadow: var(--shadow-lg) !important;
+            border-radius: var(--radius-lg) !important;
+            border: 1px solid var(--border-color) !important;
+        }
+
+        .leaflet-popup-content {
+            margin: var(--spacing-lg) !important;
+            font-family: 'Inter', sans-serif !important;
+        }
+
+        .popup-form-field {
+            margin-bottom: var(--spacing-md);
+        }
+
+        .popup-form-field-group {
+            display: flex;
+            gap: var(--spacing-sm);
+            align-items: flex-end;
+        }
+
+        .popup-form-field-group > div {
+            flex-grow: 1;
+        }
+
+        .popup-form-field-group > div:last-child {
+            flex-grow: 0;
+            flex-basis: 80px;
+        }
+
+        .popup-actions {
+            margin-top: var(--spacing-lg);
+            text-align: right;
+            display: flex;
+            gap: var(--spacing-sm);
+            justify-content: flex-end;
+        }
+
+        /* --- PANEL DE DEBUG ETA MEJORADO --- */
+        #etaDebugPanel {
+            background: var(--bg-surface);
+            padding: var(--spacing-md);
+            margin: var(--spacing-md) 0;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            font-size: 0.75rem;
+            text-align: left;
+            max-height: 250px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--border-color) transparent;
+        }
+
+        #etaDebugPanel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #etaDebugPanel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #etaDebugPanel::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: var(--radius-sm);
+        }
+
+        #etaDebugPanel h4,
+        #etaDebugPanel h5 {
+            color: var(--color-primary);
+            margin: var(--spacing-xs) 0;
+            padding-bottom: var(--spacing-xs);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.875rem;
+        }
+
+        #etaDebugPanel p {
+            margin: var(--spacing-xs) 0;
+            line-height: 1.4;
+            color: var(--text-secondary);
+        }
+
+        #etaDebugPanel hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: var(--spacing-sm) 0;
+        }
+
+        /* --- RESPONSIVE DESIGN MEJORADO --- */
+        @media (max-width: 768px) {
+            body {
+                font-size: 13px;
+            }
+
+            #map {
+                height: 50vh;
+            }
+
+            #controls {
+                height: 50vh;
+            }
+
+            .accordion-header {
+                padding: var(--spacing-md);
+                font-size: 0.875rem;
+            }
+
+            .accordion-content {
+                padding: var(--spacing-md);
+            }
+
+            #trackingDashboard {
+                padding: var(--spacing-lg);
+            }
+
+            #timeDeviation {
+                font-size: 3rem;
+            }
+
+            #trackingDetails {
+                grid-template-columns: 1fr;
+                gap: var(--spacing-sm);
+            }
+
+            .btn {
+                padding: var(--spacing-sm) var(--spacing-md);
+                font-size: 0.75rem;
+                min-height: 40px;
+            }
+
+            .btn-sm {
+                padding: 6px var(--spacing-sm);
+                font-size: 0.7rem;
+                min-height: 32px;
+            }
+
+            .stop-item {
+                padding: var(--spacing-sm);
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--spacing-sm);
+            }
+
+            .stop-item-actions {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .tracking-stop-row {
+                grid-template-columns: 1fr;
+                gap: 2px;
+                text-align: left;
+            }
+
+            .tracking-stop-time,
+            .tracking-stop-eta {
+                text-align: left;
+            }
+        }
+
+        /* --- VISTA HORIZONTAL MEJORADA --- */
+        #toggleMapLandscapeBtn {
+            display: none;
+        }
+
+        @media screen and (orientation: landscape) and (min-width: 768px) {
+            body.is-tracking-landscape {
+                flex-direction: row;
+            }
+
+            body.is-tracking-landscape #map {
+                height: 100vh;
+                width: 0;
+                transition: width var(--transition-slow);
+                border-radius: 0;
+            }
+
+            body.is-tracking-landscape.show-map-landscape #map {
+                width: 50vw;
+            }
+
+            body.is-tracking-landscape #controls {
+                height: 100vh;
+                width: 100vw;
+                border-top: none;
+                border-left: 1px solid var(--border-color);
+                transition: width var(--transition-slow);
+            }
+
+            body.is-tracking-landscape.show-map-landscape #controls {
+                width: 50vw;
+            }
+
+            body.is-tracking-landscape #trackingDashboard {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                height: 100%;
+                padding: 4vw;
+            }
+
+            body.is-tracking-landscape #timeDeviation {
+                font-size: 8vw;
+                margin-bottom: 4vh;
+            }
+
+            body.is-tracking-landscape #trackingStopsListContainer {
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+            }
+
+            body.is-tracking-landscape #trackingStopsList {
+                flex-grow: 1;
+                overflow-y: auto;
+            }
+
+            body.is-tracking-landscape #toggleMapLandscapeBtn {
+                display: flex;
+                position: fixed;
+                bottom: var(--spacing-xl);
+                right: var(--spacing-xl);
+                z-index: 1001;
+                padding: var(--spacing-md) var(--spacing-lg);
+                font-size: 1rem;
+                box-shadow: var(--shadow-lg);
+                border-radius: var(--radius-xl);
+            }
+
+            body.is-tracking-landscape #toggleEtaDebugBtn,
+            body.is-tracking-landscape #manualNavContainer {
+                position: fixed;
+                bottom: var(--spacing-xl);
+                left: var(--spacing-xl);
+                z-index: 1001;
+            }
+        }
+
+        /* --- ANIMACIONES Y EFECTOS ADICIONALES --- */
+        .fade-in {
+            animation: fadeIn var(--transition-normal) ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            border-top-color: var(--color-primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* --- MEJORAS DE ACCESIBILIDAD --- */
+        .btn:focus-visible,
+        input:focus-visible,
+        select:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* --- ESTADOS DE CARGA --- */
+        .loading-state {
+            opacity: 0.6;
+            pointer-events: none;
+            position: relative;
+        }
+
+        .loading-state::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            border-top-color: var(--color-primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+    <div id="controls">
+        
+        <div id="trackingDashboard" style="display: none;" class="fade-in">
+            <div>
+                <div id="trackingInfoDisplay">Ruta en Progreso</div>
+                <div id="timeDeviation">00:00</div>
+                <div id="trackingDetails">
+                    <div class="tracking-detail-item">
+                        <div id="speedDisplay">Velocidad: 0 KM/H</div>
+                    </div>
+                    <div class="tracking-detail-item">
+                        <div id="nextStopDisplay">Próxima: N/A</div>
+                    </div>
+                </div>
+                <div style="margin-top: var(--spacing-lg);">
+                    <button id="stopTrackingBtn" onclick="stopTracking()" class="btn btn-danger btn-block btn-lg">
+                        🛑 Detener Seguimiento
+                    </button>
+                    <div id="manualNavContainer" style="margin-top: var(--spacing-md);">
+                        <label style="display: flex; align-items: center; gap: var(--spacing-xs); margin-bottom: var(--spacing-sm);">
+                            <input type="checkbox" id="manualStopNav" onchange="updateManualNavButtons()" style="width: auto; margin: 0;">
+                            <span>Navegación Manual</span>
+                        </label>
+                        <div style="display: flex; gap: var(--spacing-sm);">
+                            <button id="prevStopBtn" onclick="goToPreviousActivePoint()" class="btn btn-outline btn-sm" style="display:none;">
+                                ← Anterior
+                            </button>
+                            <button id="nextStopBtn" onclick="goToNextActivePoint()" class="btn btn-outline btn-sm" style="display:none;">
+                                Siguiente →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="trackingStopsListContainer">
+                <h4>Próximas Paradas y ETA</h4>
+                <div id="trackingStopsList"></div>
+            </div>
+
+            <button id="toggleEtaDebugBtn" onclick="toggleEtaDebug()" class="btn btn-accent btn-sm btn-block" style="margin-top: var(--spacing-lg);">
+                🐛 Debug ETA
+            </button>
+            <div id="etaDebugPanel" style="display: none;"></div>
+            
+            <button id="toggleMapLandscapeBtn" onclick="toggleMapLandscapeView()" class="btn btn-primary">
+                🗺️ Mapa
+            </button>
+        </div>
+
+        <div id="mainControlsContainer">
+            <div class="accordion-header active">
+                <span>📍 Editar Ruta Actual</span>
+            </div>
+            <div class="accordion-content active">
+                <p style="font-size: 0.875rem; margin-top: 0; color: var(--text-muted); line-height: 1.5;">
+                    Toca una zona vacía del mapa para añadir un punto. <br>
+                    Toca un punto existente para editarlo o arrástralo para moverlo.
+                </p>
+                <div style="display: flex; gap: var(--spacing-sm); margin-bottom: var(--spacing-md); flex-wrap: wrap;">
+                    <button class="btn btn-accent btn-sm" onclick="toggleWaypointVisibility()">
+                        👁️ Ver/Ocultar Ptos. de Paso
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="clearCurrentRoute()">
+                        🗑️ Limpiar Ruta
+                    </button>
+                </div>
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: var(--spacing-lg) 0;">
+                
+                <h4>Lista de Puntos de Ruta</h4>
+                <label style="display: flex; align-items: center; gap: var(--spacing-xs); margin-bottom: var(--spacing-md);">
+                    <input type="checkbox" id="autoCalcTimes" checked onchange="calculateAndApplyAllIntermediateTimes()" style="width: auto; margin: 0;">
+                    <span>Calcular horarios intermedios automáticamente</span>
+                </label>
+                <div id="stopsList" style="margin-top: var(--spacing-md);">
+                    <div style="text-align: center; color: var(--text-muted); padding: var(--spacing-xl);">
+                        No hay puntos definidos.
+                    </div>
+                </div>
+            </div>
+
+            <div class="accordion-header">
+                <span>💾 Guardar y Cargar Rutas</span>
+            </div>
+            <div class="accordion-content">
+                <label for="routeName">Nombre de la Ruta:</label>
+                <input type="text" id="routeName" placeholder="Ej: Ruta Centro">
+                <button onclick="saveRoute()" class="btn btn-primary btn-block">
+                    💾 Guardar Ruta
+                </button>
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: var(--spacing-lg) 0;">
+                <label for="savedRoutes">Cargar Ruta Guardada:</label>
+                <select id="savedRoutes"></select>
+                <div style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-md);">
+                    <button onclick="loadRoute()" class="btn btn-secondary" style="flex: 1;">
+                        📂 Cargar
+                    </button>
+                    <button onclick="deleteRoute()" class="btn btn-danger" style="flex: 1;">
+                        🗑️ Borrar
+                    </button>
+                </div>
+                <button onclick="toggleFullScreen()" class="btn btn-accent btn-block" style="margin-top: var(--spacing-lg);" id="fullscreenBtn">
+                    🖥️ Pantalla Completa
+                </button>
+            </div>
+
+            <div class="accordion-header">
+                <span>▶️ Iniciar Seguimiento y Cola</span>
+            </div>
+            <div class="accordion-content">
+                <h4>Iniciar Seguimiento</h4>
+                <p style="font-size: 0.875rem; color: var(--text-muted); line-height: 1.5;">
+                    Asegúrate de que la ruta actual tiene P. Inicio y P. Final con horarios definidos.
+                </p>
+                <button id="startTrackingBtn" onclick="startTracking()" class="btn btn-primary btn-block btn-lg">
+                    ▶️ Iniciar Seguimiento
+                </button>
+                <hr style="border: none; border-top: 1px solid var(--border-color); margin: var(--spacing-lg) 0;">
+                
+                <h4>Cola de Rutas</h4>
+                <label for="routeToQueue">Añadir ruta a la cola:</label>
+                <select id="routeToQueue"></select>
+                <button onclick="addRouteToQueue()" class="btn btn-secondary btn-block" style="margin-top: var(--spacing-sm);">
+                    ➕ Añadir a Cola
+                </button>
+                <h5 style="margin-top: var(--spacing-lg);">En Cola:</h5>
+                <div id="routeQueueDisplay" style="background: var(--bg-surface); padding: var(--spacing-md); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
+                    Vacía.
+                </div>
+                <button onclick="clearRouteQueue()" class="btn btn-danger btn-block">
+                    🗑️ Limpiar Cola
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        'use strict';
+        // --- VARIABLES GLOBALES ---
+        let map;
+        let routePoints = [];
+        let routeLineEdit;
+        let trackingRouteLine;
+        let userMarker;
+        let trackingIntervalId;
+        let isTracking = false;
+        let currentSegmentStartIndex = 0;
+        let lastKnownPosition = null;
+        let currentStopRadius = 50;
+        let currentRouteNameForTracking = "";
+        let waypointsVisible = false;
+        let deviationDisplayIntervalId = null;
+        let latestDeviationMillis = null;
+        let isEtaDebugVisible = false;
+        let lastDeviationCalculation = {};
+        let trackingState = { activeLegPoints: [] };
+        
+        // NUEVO: Estado para vista horizontal
+        let isMapVisibleInLandscape = false;
+
+        const CACHE_PREFIX = 'smartMovePro_unidir_simple_route_';
+        const ROUTE_QUEUE_CACHE_KEY = 'smartMovePro_unidir_simple_routeQueue';
+
+        // --- FUNCIONES DE INICIALIZACIÓN Y UTILIDADES ---
+        function generateUniqueId() { return Date.now().toString(36) + Math.random().toString(36).substring(2); }
+
+        function createDivIcon(text, pointCategory = '', isStartPoint = false) {
+            let htmlContent = '';
+            let iconSize = [30, 30]; let iconAnchor = [15, 15]; let className = 'leaflet-div-icon';
+
+            if (pointCategory === 'waypoint') {
+                className += ' waypoint-marker-icon'; iconSize = [12, 12]; iconAnchor = [6, 6];
+            } else if (pointCategory === 'lineEndpoint') {
+                const bgColor = isStartPoint ? '#10b981' : '#ef4444';
+                const P_char = text ? text.substring(0, 2).toUpperCase() : (isStartPoint ? 'PI' : 'PF');
+                htmlContent = `<div style="background: linear-gradient(135deg, ${bgColor} 0%, ${bgColor}dd 100%); width: 32px; height:32px; display:flex; justify-content:center; align-items:center; border-radius: 50%; color: white; font-size:14px; font-weight:700; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">${P_char}</div>`;
+                iconSize = [38, 38]; iconAnchor = [19, 19];
+            } else {
+                className += ' intermediate-stop-icon'; const displayText = text || '?'; htmlContent = displayText;
+                const tempSpan = document.createElement('span'); tempSpan.style.fontSize = '12px'; tempSpan.style.fontWeight = 'bold'; tempSpan.style.visibility = 'hidden'; tempSpan.style.position = 'absolute'; tempSpan.textContent = displayText; document.body.appendChild(tempSpan);
+                const textWidth = tempSpan.offsetWidth; document.body.removeChild(tempSpan);
+                iconSize = [Math.max(20, textWidth) + 16, 24 + 8]; iconAnchor = [iconSize[0] / 2, iconSize[1] / 2];
+            }
+            return L.divIcon({ className: className, html: htmlContent, iconSize: iconSize, iconAnchor: iconAnchor });
+        }
+
+        function createUserLocationIcon() { return L.divIcon({ className: 'user-location-icon', iconSize: [18, 18], iconAnchor: [9, 9] }); }
+
+        function initMap() {
+            map = L.map('map').setView([-34.6037, -58.3816], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+            
+            map.on('click', onMapClick);
+            
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => map.setView([pos.coords.latitude, pos.coords.longitude], 13));
+            }
+
+            document.querySelectorAll('.accordion-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const content = header.nextElementSibling;
+                    header.classList.toggle('active');
+                    content.classList.toggle('active');
+                });
+            });
+
+            const radiusInput = document.createElement('input');
+            radiusInput.type = 'number';
+            radiusInput.id = 'stopRadiusInput';
+            radiusInput.value = '50';
+            radiusInput.style.display = 'none';
+            document.body.appendChild(radiusInput);
+
+            redrawRouteLine();
+            updateStopsList();
+        }
+        
+        // --- LÓGICA DE EDICIÓN DE RUTA ---
+        function onMapClick(e) {
+            if (isTracking) return;
+            if (map.dragging && map.dragging.moved()) return;
+
+            const content = `
+                <div style="text-align:center; font-family: 'Inter', sans-serif;">
+                    <p style="margin:0 0 15px 0; font-weight:600; color: var(--text-primary);">Añadir punto aquí:</p>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+                        <button class="btn btn-secondary btn-sm" onclick="addPointFromPopup('lineEndpoint', ${e.latlng.lat}, ${e.latlng.lng})" style="margin: 0;">📍 Inicio/Final</button>
+                        <button class="btn btn-primary btn-sm" onclick="addPointFromPopup('intermediateStop', ${e.latlng.lat}, ${e.latlng.lng})" style="margin: 0;">🚏 Parada</button>
+                        <button class="btn btn-outline btn-sm" onclick="addPointFromPopup('waypoint', ${e.latlng.lat}, ${e.latlng.lng})" style="margin: 0;">📌 Paso</button>
+                    </div>
+                </div>
+            `;
+            L.popup().setLatLng(e.latlng).setContent(content).openOn(map);
+        }
+
+        function addPointFromPopup(pointCategory, lat, lng) {
+            map.closePopup();
+            const latlng = L.latLng(lat, lng);
+            let newPointData = {
+                id: generateUniqueId(), lat: latlng.lat, lng: latlng.lng,
+                originalIndex: routePoints.length,
+                pointCategory: pointCategory
+            };
+
+            switch (pointCategory) {
+                case 'waypoint':
+                    newPointData.name = `Paso ${routePoints.filter(p => p.pointCategory === 'waypoint').length + 1}`;
+                    break;
+                case 'intermediateStop':
+                    newPointData.name = `Parada ${routePoints.filter(p => p.pointCategory === 'intermediateStop').length + 1}`;
+                    newPointData.scheduledTime = null;
+                    break;
+                case 'lineEndpoint':
+                    const currentLineEndpoints = routePoints.filter(p => p.pointCategory === 'lineEndpoint');
+                    if (currentLineEndpoints.length >= 2) {
+                        alert("Ya existen un Punto de Inicio y un Punto Final. Elimine uno para añadir otro.");
+                        return;
+                    }
+                    const hasStartPoint = currentLineEndpoints.some(p => p.isStartPoint);
+                    newPointData.isStartPoint = !hasStartPoint;
+                    newPointData.name = newPointData.isStartPoint ? "Punto de Inicio" : "Punto Final";
+                    newPointData.schedule = { scheduledTime: null };
+                    break;
+            }
+            createAndAddMarker(newPointData);
+        }
+
+        function createAndAddMarker(pointData) {
+            const newPoint = { ...pointData };
+
+            newPoint.marker = L.marker([newPoint.lat, newPoint.lng], {
+                icon: createDivIcon(newPoint.name, newPoint.pointCategory, newPoint.isStartPoint),
+                draggable: true
+            }).addTo(map);
+
+            if (newPoint.pointCategory !== 'waypoint') {
+                const circleColor = (newPoint.pointCategory === 'lineEndpoint') ? (newPoint.isStartPoint ? '#10b981' : '#ef4444') : '#2563eb';
+                newPoint.radiusCircle = L.circle([newPoint.lat, newPoint.lng], {
+                    radius: currentStopRadius, color: circleColor, weight: 2, opacity: 0.7,
+                    fillColor: circleColor, fillOpacity: 0.2
+                }).addTo(map);
+            }
+
+            newPoint.marker.on('dragend', (event) => {
+                if (isTracking) { event.target.setLatLng(L.latLng(newPoint.lat, newPoint.lng)); return; }
+                const pos = event.target.getLatLng(); newPoint.lat = pos.lat; newPoint.lng = pos.lng;
+                if (newPoint.radiusCircle) newPoint.radiusCircle.setLatLng(pos);
+                redrawRouteLine();
+                if (document.getElementById('autoCalcTimes').checked) calculateAndApplyAllIntermediateTimes();
+            });
+
+            newPoint.marker.on('click', (ev) => {
+                L.DomEvent.stopPropagation(ev);
+                if (isTracking) return;
+                openEditPopup(newPoint);
+            });
+
+            routePoints.push(newPoint);
+            routePoints.sort((a, b) => a.originalIndex - b.originalIndex);
+            routePoints.forEach((p, idx) => p.originalIndex = idx);
+
+            updateAllMarkerIconsAndLabels();
+            redrawRouteLine();
+            updateStopsList();
+            if (document.getElementById('autoCalcTimes').checked) calculateAndApplyAllIntermediateTimes();
+
+            if (newPoint.pointCategory !== 'waypoint') {
+                openEditPopup(newPoint);
+            }
+        }
+        
+        function formatDateTimeForInput(date) {
+            if (!date || isNaN(new Date(date).getTime())) return "";
+            const d = new Date(date);
+            d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+            return d.toISOString().slice(0, 16);
+        }
+
+        function openEditPopup(point) {
+            let formContent = `
+                <div class="popup-form-field">
+                  <label for="popup_pointName">Nombre:</label>
+                  <input type="text" id="popup_pointName" value="${point.name || ''}" ${point.pointCategory === 'waypoint' ? 'readonly' : ''}>
+                </div>`;
+
+            if (point.pointCategory === 'lineEndpoint' || point.pointCategory === 'intermediateStop') {
+                const timeValue = point.pointCategory === 'lineEndpoint' ? (point.schedule ? point.schedule.scheduledTime : null) : point.scheduledTime;
+                const dateObj = timeValue ? new Date(timeValue) : null;
+                const secondsValue = dateObj ? dateObj.getSeconds() : 0;
+                let label = '';
+                if (point.pointCategory === 'lineEndpoint') {
+                    label = point.isStartPoint ? 'Salida Programada (HH:MM:SS):' : 'Llegada Programada (HH:MM:SS):';
+                } else {
+                    label = 'Horario Programado (HH:MM:SS):';
+                }
+                formContent += `
+                    <div class="popup-form-field">
+                        <label for="popup_scheduledTime">${label}</label>
+                        <div class="popup-form-field-group">
+                           <div>
+                                <input type="datetime-local" id="popup_scheduledTime" value="${formatDateTimeForInput(timeValue)}">
+                           </div>
+                           <div>
+                                <input type="number" id="popup_scheduledSeconds" min="0" max="59" value="${String(secondsValue).padStart(2, '0')}" title="Segundos">
+                           </div>
+                        </div>
+                    </div>`;
+            }
+            
+            formContent += `
+                <div class="popup-actions">
+                  <button class="btn btn-danger btn-sm" onclick="deletePoint('${point.id}')">🗑️ Borrar</button>
+                  <button class="btn btn-primary btn-sm" onclick="updatePointFromPopup('${point.id}')">💾 Guardar</button>
+                </div>
+            `;
+            
+            const popup = L.popup({ minWidth: 320, closeButton: true })
+                .setLatLng([point.lat, point.lng])
+                .setContent(formContent)
+                .openOn(map);
+        }
+        
+        window.updatePointFromPopup = function(pointId) {
+            const point = routePoints.find(p => p.id === pointId);
+            if (!point) return;
+
+            const newName = document.getElementById('popup_pointName').value.trim();
+            if (newName) point.name = newName;
+
+            const timeInput = document.getElementById('popup_scheduledTime');
+            if (timeInput) {
+                const timeValue = timeInput.value;
+                const secondsValue = parseInt(document.getElementById('popup_scheduledSeconds').value, 10) || 0;
+                
+                const dateVal = timeValue ? new Date(timeValue) : null;
+                if (timeValue && isNaN(dateVal?.getTime())) {
+                    alert("Formato de fecha/hora inválido."); return;
+                }
+
+                if (dateVal) {
+                    dateVal.setSeconds(secondsValue, 0);
+                }
+                
+                if (point.pointCategory === 'lineEndpoint') {
+                    if (!point.schedule) point.schedule = {};
+                    point.schedule.scheduledTime = dateVal;
+                } else {
+                    point.scheduledTime = dateVal;
+                }
+            }
+
+            map.closePopup();
+            updateAllMarkerIconsAndLabels();
+            updateStopsList();
+            if (document.getElementById('autoCalcTimes').checked) {
+                calculateAndApplyAllIntermediateTimes();
+            }
+        }
+        
+        window.deletePoint = function(pointId) {
+            const point = routePoints.find(p => p.id === pointId);
+            if (!point) return;
+
+            if (confirm(`¿Seguro que quieres borrar el punto "${point.name}"?`)) {
+                map.closePopup();
+                map.removeLayer(point.marker);
+                if (point.radiusCircle) map.removeLayer(point.radiusCircle);
+                
+                routePoints = routePoints.filter(p => p.id !== pointId);
+
+                updateAllMarkerIconsAndLabels();
+                redrawRouteLine();
+                updateStopsList();
+                if (document.getElementById('autoCalcTimes').checked) calculateAndApplyAllIntermediateTimes();
+            }
+        }
+        
+        function toggleWaypointVisibility() {
+            waypointsVisible = !waypointsVisible;
+            routePoints.forEach(p => {
+                if (p.pointCategory === 'waypoint' && p.marker) {
+                    if (waypointsVisible) {
+                        if (!map.hasLayer(p.marker)) map.addLayer(p.marker);
+                    } else {
+                        if (map.hasLayer(p.marker)) map.removeLayer(p.marker);
+                    }
+                }
+            });
+        }
+        
+        function updateAllMarkerIconsAndLabels() {
+            const displayOrderedPoints = getSortedRoutePointsForDisplay();
+            routePoints.forEach(p => {
+                if (p.marker) {
+                    let text = '';
+                    if (p.pointCategory === 'lineEndpoint') { text = p.name; } 
+                    else if (p.pointCategory === 'intermediateStop') {
+                        const displayIdx = displayOrderedPoints.filter(dp => dp.pointCategory === 'intermediateStop').findIndex(dp => dp.id === p.id);
+                        text = (displayIdx !== -1) ? String(displayIdx + 1) : '?';
+                    }
+                    p.marker.setIcon(createDivIcon(text, p.pointCategory, p.isStartPoint));
+                }
+            });
+        }
+        
+        // --- LÓGICA DE LA LISTA DE PUNTOS INTERACTIVA ---
+        function updateStopsList() {
+            const listDiv = document.getElementById('stopsList');
+            const displayPoints = getSortedRoutePointsForDisplay();
+
+            if (displayPoints.length === 0) {
+                listDiv.innerHTML = `
+                    <div style="text-align: center; color: var(--text-muted); padding: var(--spacing-xl); background: var(--bg-surface); border-radius: var(--radius-lg); border: 2px dashed var(--border-color);">
+                        <p style="margin: 0; font-size: 1rem;">📍 No hay paradas definidas</p>
+                        <p style="margin: var(--spacing-xs) 0 0 0; font-size: 0.875rem;">Toca el mapa para añadir puntos</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = "";
+            let intermediateVisualCounter = 1;
+
+            displayPoints.forEach((p) => {
+                let typeText = "", timeStr = "N/A";
+                let itemClass = "stop-item";
+                let icon = "📍";
+
+                if (p.pointCategory === 'lineEndpoint') {
+                    itemClass += " line-endpoint-highlight";
+                    typeText = p.isStartPoint ? "P. Inicio" : "P. Final";
+                    icon = p.isStartPoint ? "🟢" : "🔴";
+                    if (p.schedule && p.schedule.scheduledTime) {
+                        timeStr = `${p.isStartPoint ? 'Sale' : 'Llega'}: ${formatTime(p.schedule.scheduledTime, true)}`;
+                    } else {
+                        timeStr = "Horario no definido";
+                    }
+                } else if (p.pointCategory === 'intermediateStop') {
+                    typeText = `Parada ${intermediateVisualCounter++}`;
+                    icon = "🚏";
+                    timeStr = `Prog: ${formatTime(p.scheduledTime, true)}`;
+                }
+
+                html += `
+                    <div class="${itemClass}" id="stop-list-item-${p.id}">
+                        <div class="stop-item-info">
+                            <p class="stop-name">${icon} ${p.name}</p>
+                            <p>${typeText} - ${timeStr}</p>
+                        </div>
+                        <div class="stop-item-actions">
+                            <button class="btn btn-accent btn-sm" onclick="focusAndEditPoint('${p.id}')" title="Editar">✏️</button>
+                            <button class="btn btn-danger btn-sm" onclick="deletePoint('${p.id}')" title="Eliminar">🗑️</button>
+                        </div>
+                    </div>`;
+            });
+            listDiv.innerHTML = html;
+            highlightNextStopInList();
+        }
+        
+        window.focusAndEditPoint = function(pointId) {
+            const point = routePoints.find(p => p.id === pointId);
+            if (point) {
+                map.setView([point.lat, point.lng], Math.max(map.getZoom(), 17));
+                setTimeout(() => openEditPopup(point), 200);
+            }
+        }
+        
+        function highlightNextStopInList() {
+            document.querySelectorAll('.stop-item').forEach(item => item.classList.remove('next-stop-highlight'));
+            let nextStopName = "N/A";
+
+            if (isTracking && trackingState.activeLegPoints && trackingState.activeLegPoints.length > 0) {
+                const nextStopInfo = getNextDisplayableStop();
+                if (nextStopInfo.point) {
+                    nextStopName = nextStopInfo.point.name;
+                    const itemInList = document.getElementById(`stop-list-item-${nextStopInfo.point.id}`);
+                    if (itemInList) { itemInList.classList.add('next-stop-highlight'); }
+                } else {
+                    nextStopName = "Fin de Ruta";
+                }
+            } else if (!isTracking) {
+                const displayPoints = getSortedRoutePointsForDisplay();
+                if (displayPoints.length > 0) { nextStopName = displayPoints[0].name; }
+            }
+            document.getElementById('nextStopDisplay').textContent = `${nextStopName}`;
+        }
+        
+        function getNextDisplayableStop() {
+            if (!isTracking || !trackingState.activeLegPoints) return { point: null, index: -1 };
+            for (let i = currentSegmentStartIndex + 1; i < trackingState.activeLegPoints.length; i++) {
+                if (trackingState.activeLegPoints[i].pointCategory !== 'waypoint') {
+                    return { point: trackingState.activeLegPoints[i], index: i };
+                }
+            }
+            if (currentSegmentStartIndex < trackingState.activeLegPoints.length - 1) {
+                return { point: trackingState.activeLegPoints[trackingState.activeLegPoints.length - 1], index: trackingState.activeLegPoints.length - 1 };
+            }
+            return { point: null, index: -1 };
+        }
+        
+        // --- LÓGICA DE SEGUIMIENTO (MODIFICADA PARA LA NUEVA UI) ---
+        function startTracking() {
+            const startPoint = routePoints.find(p => p.pointCategory === 'lineEndpoint' && p.isStartPoint);
+            const endPoint = routePoints.find(p => p.pointCategory === 'lineEndpoint' && !p.isStartPoint);
+            if (!startPoint || !endPoint) { alert("La ruta debe tener un Punto de Inicio y un Punto Final."); return; }
+            
+            if (!getEndpointScheduledTime(startPoint) || !getEndpointScheduledTime(endPoint)) {
+                alert(`Horarios incompletos para Punto Inicio/Final. No se puede iniciar seguimiento.`); return;
+            }
+            if (document.getElementById('autoCalcTimes').checked) { calculateAndApplyAllIntermediateTimes(); }
+
+            isTracking = true;
+            currentRouteNameForTracking = document.getElementById('routeName').value || "Ruta Actual";
+
+            if (!setupCurrentLegForTracking()) {
+                stopTracking(false, "Error configurando ruta inicial.");
+                return;
+            }
+            
+            document.getElementById('mainControlsContainer').style.display = 'none';
+            document.getElementById('trackingDashboard').style.display = 'block';
+            document.body.classList.add('is-tracking');
+            checkOrientationAndApplyLayout();
+            
+            redrawRouteLine();
+            if(waypointsVisible) toggleWaypointVisibility();
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    initialPosition => {
+                        lastKnownPosition = initialPosition;
+                        const { latitude, longitude } = initialPosition.coords;
+                        if (userMarker) userMarker.setLatLng([latitude, longitude]);
+                        else userMarker = L.marker([latitude, longitude], { icon: createUserLocationIcon() }).addTo(map);
+                        map.setView([latitude, longitude], 16);
+
+                        if (trackingState.activeLegPoints && trackingState.activeLegPoints.length > 0) {
+                            let closestPointIndex = 0; let minDistance = Infinity;
+                            trackingState.activeLegPoints.forEach((point, index) => {
+                                const distance = L.latLng(latitude, longitude).distanceTo(L.latLng(point.lat, point.lng));
+                                if (distance < minDistance) { minDistance = distance; closestPointIndex = index; }
+                            });
+                             currentSegmentStartIndex = closestPointIndex;
+                             if (currentSegmentStartIndex >= trackingState.activeLegPoints.length -1 && trackingState.activeLegPoints.length > 1) {
+                                 currentSegmentStartIndex = trackingState.activeLegPoints.length - 2;
+                             }
+                        } else currentSegmentStartIndex = 0;
+
+                        trackingIntervalId = navigator.geolocation.watchPosition(
+                            handlePositionUpdate, handleGeolocationError,
+                            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+                        );
+                        finalizeTrackingStart();
+                    },
+                    initialPositionError => {
+                        console.warn("No se pudo obtener la posición inicial:", initialPositionError.message);
+                        currentSegmentStartIndex = 0;
+                        if (trackingState.activeLegPoints.length > 0 && trackingState.activeLegPoints[0]) {
+                            map.setView([trackingState.activeLegPoints[0].lat, trackingState.activeLegPoints[0].lng], 16);
+                        }
+                        trackingIntervalId = navigator.geolocation.watchPosition(
+                            handlePositionUpdate, handleGeolocationError,
+                            { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+                        );
+                        finalizeTrackingStart();
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+                );
+            } else {
+                alert("Geolocalización no disponible.");
+                stopTracking(false, "Geolocalización no disponible");
+            }
+        }
+        
+        function finalizeTrackingStart() {
+            if (!isTracking) return;
+            document.getElementById('trackingInfoDisplay').textContent = `🚀 ${currentRouteNameForTracking}`;
+
+            latestDeviationMillis = null;
+            if (deviationDisplayIntervalId) clearInterval(deviationDisplayIntervalId);
+            deviationDisplayIntervalId = setInterval(updateDeviationDisplay, 5000);
+
+            if (lastKnownPosition) calculateTimeDeviation(lastKnownPosition);
+            updateDeviationDisplay();
+
+            highlightNextStopInList();
+            updateManualNavButtons();
+            updateTrackingStopsList();
+            if (isEtaDebugVisible) { updateEtaDebugInfo(); }
+        }
+
+        function stopTracking(completedNaturally = false, reason = "") {
+            if (trackingIntervalId) navigator.geolocation.clearWatch(trackingIntervalId);
+            if (deviationDisplayIntervalId) clearInterval(deviationDisplayIntervalId);
+            trackingIntervalId = null; deviationDisplayIntervalId = null; isTracking = false; lastKnownPosition = null;
+            
+            document.getElementById('mainControlsContainer').style.display = 'block';
+            document.getElementById('trackingDashboard').style.display = 'none';
+            document.getElementById('trackingStopsList').innerHTML = '';
+
+            document.body.classList.remove('is-tracking', 'is-tracking-landscape', 'show-map-landscape');
+            isMapVisibleInLandscape = false;
+            setTimeout(() => map.invalidateSize(), 10);
+
+            if (isEtaDebugVisible) {
+                const debugPanel = document.getElementById('etaDebugPanel');
+                const debugBtn = document.getElementById('toggleEtaDebugBtn');
+                isEtaDebugVisible = false;
+                if(debugPanel) debugPanel.style.display = 'none';
+                if(debugPanel) debugPanel.innerHTML = '';
+                if(debugBtn) debugBtn.textContent = '🐛 Debug ETA';
+            }
+
+            if (userMarker) { map.removeLayer(userMarker); userMarker = null; }
+
+            redrawRouteLine();
+            updateStopsList();
+            currentSegmentStartIndex = 0;
+            updateManualNavButtons();
+            currentRouteNameForTracking = "";
+
+            if (completedNaturally) {
+                alert("🎉 ¡Ruta completada exitosamente!"); checkRouteQueue();
+            } else {
+                const msg = "Seguimiento detenido." + (reason ? " Razón: " + reason : "");
+                console.log(msg); if (reason && reason.startsWith("Error")) alert(msg);
+            }
+        }
+        
+        // --- RESTO DE FUNCIONES (CONTINUARÁ EN LA SIGUIENTE PARTE) ---
+
+
+        function getPathPointsForPolyline() {
+            const allPointsSorted = [...routePoints].sort((a, b) => a.originalIndex - b.originalIndex);
+            if (allPointsSorted.length < 1) return [];
+            const startPoint = allPointsSorted.find(p => p.pointCategory === 'lineEndpoint' && p.isStartPoint);
+            const endPoint = allPointsSorted.find(p => p.pointCategory === 'lineEndpoint' && !p.isStartPoint);
+            if (!startPoint || !endPoint) {
+                 return allPointsSorted.filter(p => p.pointCategory !== 'intermediateStop').map(p => ({...p}));
+            }
+            const startIndexInSorted = allPointsSorted.findIndex(p => p.id === startPoint.id);
+            const endIndexInSorted = allPointsSorted.findIndex(p => p.id === endPoint.id);
+            let segmentPoints;
+            if (startIndexInSorted <= endIndexInSorted) {
+                segmentPoints = allPointsSorted.slice(startIndexInSorted, endIndexInSorted + 1);
+            } else {
+                segmentPoints = [
+                    ...allPointsSorted.slice(startIndexInSorted),
+                    ...allPointsSorted.slice(0, endIndexInSorted + 1)
+                ];
+            }
+            return segmentPoints.filter(p =>
+                p.pointCategory === 'lineEndpoint' ||
+                p.pointCategory === 'waypoint' ||
+                p.pointCategory === 'intermediateStop'
+            ).map(p => ({...p}));
+        }
+
+        function calculateAndApplyAllIntermediateTimes() {
+            const autoCalc = document.getElementById('autoCalcTimes').checked;
+            if (!autoCalc) return;
+
+            const startPoint = routePoints.find(p => p.pointCategory === 'lineEndpoint' && p.isStartPoint);
+            const endPoint = routePoints.find(p => p.pointCategory === 'lineEndpoint' && !p.isStartPoint);
+
+            if (!startPoint || !endPoint || !startPoint.schedule || !endPoint.schedule || !startPoint.schedule.scheduledTime || !endPoint.schedule.scheduledTime) {
+                routePoints.filter(p => p.pointCategory === 'intermediateStop').forEach(stop => stop.scheduledTime = null);
+                updateStopsList(); return;
+            }
+            const legStartTime = new Date(startPoint.schedule.scheduledTime);
+            const legEndTime = new Date(endPoint.schedule.scheduledTime);
+
+            const pathForCalc = getPathPointsForPolyline();
+            distributeTimesProportionally(pathForCalc, legStartTime, legEndTime);
+            updateStopsList();
+        }
+
+        function distributeTimesProportionally(legPathPoints, legStartTimeDate, legEndTimeDate) {
+            if (!legStartTimeDate || !legEndTimeDate || legPathPoints.length < 2) return;
+            const legStartMillis = legStartTimeDate.getTime();
+            const legEndMillis = legEndTimeDate.getTime();
+            const totalDurationMillis = legEndMillis - legStartMillis;
+            const intermediateStopsInLeg = legPathPoints.slice(1, -1).filter(p => p.pointCategory === 'intermediateStop');
+
+            if (totalDurationMillis <= 0) {
+                intermediateStopsInLeg.forEach(p_leg => {
+                    const pointInMainRoute = routePoints.find(rp => rp.id === p_leg.id);
+                    if(pointInMainRoute) pointInMainRoute.scheduledTime = new Date(legStartMillis);
+                });
+                return;
+            }
+            let totalDistance = 0; const segmentDistances = [];
+            for (let i = 0; i < legPathPoints.length - 1; i++) {
+                const dist = L.latLng(legPathPoints[i].lat, legPathPoints[i].lng).distanceTo(L.latLng(legPathPoints[i+1].lat, legPathPoints[i+1].lng));
+                segmentDistances.push(dist); totalDistance += dist;
+            }
+            if (totalDistance < 1.0) {
+                const numTimeSegments = intermediateStopsInLeg.length + 1;
+                if (numTimeSegments <= 0) return;
+                const timePerSegment = totalDurationMillis / numTimeSegments;
+                let currentTime = legStartMillis;
+                for (let i = 0; i < intermediateStopsInLeg.length; i++) {
+                    currentTime += timePerSegment;
+                    const pointInMainRoute = routePoints.find(rp => rp.id === intermediateStopsInLeg[i].id);
+                    if (pointInMainRoute) pointInMainRoute.scheduledTime = new Date(currentTime);
+                }
+            } else {
+                let accumulatedDistance = 0;
+                for (let i = 0; i < legPathPoints.length - 1; i++) {
+                    accumulatedDistance += segmentDistances[i];
+                    const nextPointInPath = legPathPoints[i+1];
+                    if (nextPointInPath.pointCategory === 'intermediateStop') {
+                        const proportionOfRoute = accumulatedDistance / totalDistance;
+                        const timeOffsetMillis = totalDurationMillis * proportionOfRoute;
+                        const pointInMainRoute = routePoints.find(rp => rp.id === nextPointInPath.id);
+                        if(pointInMainRoute) pointInMainRoute.scheduledTime = new Date(legStartMillis + timeOffsetMillis);
+                    }
+                }
+            }
+        }
+
+        function clearCurrentRoute() {
+            if(isTracking) stopTracking();
+            routePoints.forEach(p => {
+                if (p.marker) map.removeLayer(p.marker);
+                if (p.radiusCircle) map.removeLayer(p.radiusCircle);
+            });
+            routePoints = [];
+            if (routeLineEdit) map.removeLayer(routeLineEdit); routeLineEdit = null;
+            if (trackingRouteLine) map.removeLayer(trackingRouteLine); trackingRouteLine = null;
+            updateStopsList(); redrawRouteLine();
+        }
+
+        function redrawRouteLine() {
+            if (routeLineEdit) map.removeLayer(routeLineEdit); routeLineEdit = null;
+            if (trackingRouteLine) map.removeLayer(trackingRouteLine); trackingRouteLine = null;
+            const polylinePathPoints = getPathPointsForPolyline();
+            if (polylinePathPoints.length > 1) {
+                const latlngs = polylinePathPoints.map(p => [p.lat, p.lng]);
+                if (isTracking) {
+                    trackingRouteLine = L.polyline(latlngs, {color: '#10b981', weight: 6, opacity: 0.9}).addTo(map);
+                } else {
+                    routeRouteLine = L.polyline(latlngs, {color: '#2563eb', weight: 4, dashArray: '8, 4', opacity: 0.8}).addTo(map);
+                }
+            }
+        }
+        function getSortedRoutePointsForDisplay() { return [...routePoints].sort((a, b) => a.originalIndex - b.originalIndex).filter(p => p.pointCategory !== 'waypoint'); }
+        
+        function formatTime(dateObj, includeDate = false) {
+            if (!dateObj || isNaN(new Date(dateObj).getTime())) return "N/A";
+            let timeStr = new Date(dateObj).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            if (includeDate) { timeStr += ` (${new Date(dateObj).toLocaleDateString('es-ES', {day:'2-digit', month:'2-digit'})})`; }
+            return timeStr;
+        }
+
+        function saveRoute() {
+            const routeNameInput = document.getElementById('routeName');
+            if (!routeNameInput.value) { alert("Por favor, ingresa un nombre para la ruta."); return; }
+            const startPoint = routePoints.find(p => p.pointCategory === 'lineEndpoint' && p.isStartPoint);
+            const endPoint = routePoints.find(p => p.pointCategory === 'lineEndpoint' && !p.isStartPoint);
+            if (!startPoint || !endPoint) { alert("Una ruta debe tener un Punto de Inicio y un Punto Final."); return; }
+            if (!startPoint.schedule || !startPoint.schedule.scheduledTime || !endPoint.schedule || !endPoint.schedule.scheduledTime) {
+                alert("Punto de Inicio y Punto Final deben tener horarios definidos."); return;
+            }
+            const savablePoints = routePoints.map(p => {
+                const pointData = { id: p.id, lat: p.lat, lng: p.lng, name: p.name, pointCategory: p.pointCategory, originalIndex: p.originalIndex };
+                if (p.pointCategory === 'lineEndpoint') { pointData.isStartPoint = p.isStartPoint; pointData.schedule = { scheduledTime: p.schedule && p.schedule.scheduledTime ? new Date(p.schedule.scheduledTime).toISOString() : null }; }
+                else if (p.pointCategory === 'intermediateStop') { pointData.scheduledTime = p.scheduledTime ? new Date(p.scheduledTime).toISOString() : null; }
+                return pointData;
+            });
+            const routeDataToSave = { points: savablePoints };
+            localStorage.setItem(CACHE_PREFIX + routeNameInput.value, JSON.stringify(routeDataToSave));
+            alert(`✅ Ruta "${routeNameInput.value}" guardada exitosamente.`);
+            loadSavedRoutesLists();
+        }
+        function loadRoute() {
+            const selectedRouteName = document.getElementById('savedRoutes').value;
+            if (!selectedRouteName) { alert("Selecciona una ruta para cargar."); return; }
+            const savedDataRaw = localStorage.getItem(CACHE_PREFIX + selectedRouteName);
+            if (!savedDataRaw) { alert("Error al cargar la ruta."); return; }
+            clearCurrentRoute();
+            const loadedRouteData = JSON.parse(savedDataRaw);
+            currentRouteNameForTracking = selectedRouteName;
+            loadedRouteData.points.forEach(p_data => {
+                const newPointData = { ...p_data };
+                if (p_data.pointCategory === 'lineEndpoint') newPointData.schedule = { scheduledTime: p_data.schedule && p_data.schedule.scheduledTime ? new Date(p_data.schedule.scheduledTime) : null };
+                else if (p_data.pointCategory === 'intermediateStop') newPointData.scheduledTime = p_data.scheduledTime ? new Date(p_data.scheduledTime) : null;
+                createAndAddMarker(newPointData);
+            });
+            map.closePopup();
+            updateAllMarkerIconsAndLabels();
+            redrawRouteLine();
+            updateStopsList();
+            const boundsPoints = routePoints.filter(p => p.pointCategory !== 'waypoint');
+            if (boundsPoints.length > 0) { const bounds = L.latLngBounds(boundsPoints.map(p => [p.lat, p.lng])); if (bounds.isValid()) map.fitBounds(bounds); }
+            document.getElementById('routeName').value = selectedRouteName;
+            alert(`📂 Ruta "${selectedRouteName}" cargada exitosamente.`);
+        }
+        function deleteRoute() {
+            const selectedRouteName = document.getElementById('savedRoutes').value;
+            if (!selectedRouteName) { alert("Selecciona una ruta para borrar."); return; }
+            if (confirm(`¿Estás seguro de que quieres borrar la ruta "${selectedRouteName}"?`)) {
+                localStorage.removeItem(CACHE_PREFIX + selectedRouteName);
+                let queue = getRouteQueue(); queue = queue.filter(name => name !== selectedRouteName);
+                saveRouteQueue(queue); loadSavedRoutesLists();
+                alert(`🗑️ Ruta "${selectedRouteName}" eliminada.`);
+            }
+        }
+        function loadSavedRoutesLists() {
+            const savedRoutesSelect = document.getElementById('savedRoutes');
+            const routeToQueueSelect = document.getElementById('routeToQueue');
+            savedRoutesSelect.innerHTML = ""; routeToQueueSelect.innerHTML = "";
+            let hasRoutes = false; const routeNames = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith(CACHE_PREFIX)) routeNames.push(key.substring(CACHE_PREFIX.length));
+            }
+            routeNames.sort();
+            routeNames.forEach(routeName => {
+                const option = document.createElement('option');
+                option.value = routeName; option.textContent = routeName;
+                savedRoutesSelect.appendChild(option.cloneNode(true));
+                routeToQueueSelect.appendChild(option.cloneNode(true));
+                hasRoutes = true;
+            });
+            if (!hasRoutes) {
+                 const option = document.createElement('option'); option.textContent = "No hay rutas guardadas"; option.disabled = true;
+                 savedRoutesSelect.appendChild(option.cloneNode(true)); routeToQueueSelect.appendChild(option);
+            }
+            updateRouteQueueDisplay();
+        }
+        function getEndpointScheduledTime(point) {
+            if (!point || point.pointCategory !== 'lineEndpoint' || !point.schedule || !point.schedule.scheduledTime) return null;
+            return new Date(point.schedule.scheduledTime);
+        }
+        function setupCurrentLegForTracking() {
+            trackingState.activeLegPoints = [];
+            const legPathPointsSource = getPathPointsForPolyline();
+            if(legPathPointsSource.length === 0) { console.error("No points found for current leg in tracking."); return false; }
+            const startPoint = routePoints.find(p => p.pointCategory === 'lineEndpoint' && p.isStartPoint);
+            const endPoint = routePoints.find(p => p.pointCategory === 'lineEndpoint' && !p.isStartPoint);
+            if (!startPoint || !endPoint) { alert("Punto de Inicio o Final no encontrado para la ruta."); return false; }
+            const routeStartTime = getEndpointScheduledTime(startPoint);
+            const routeEndTime = getEndpointScheduledTime(endPoint);
+            if (!routeStartTime || !routeEndTime) { alert(`Horarios de Punto Inicio/Final incompletos para la ruta.`); return false; }
+            trackingState.activeLegPoints = legPathPointsSource.map(legPoint => {
+                const originalPoint = routePoints.find(rp => rp.id === legPoint.id);
+                if (!originalPoint) return { ...legPoint, effectiveScheduledTime: null };
+                let effTime = null;
+                if (originalPoint.pointCategory === 'lineEndpoint') { if (originalPoint.isStartPoint) effTime = routeStartTime; else effTime = routeEndTime; }
+                else if (originalPoint.pointCategory === 'intermediateStop') { effTime = originalPoint.scheduledTime ? new Date(originalPoint.scheduledTime) : null; }
+                return { ...originalPoint, effectiveScheduledTime: effTime };
+            });
+             if (trackingState.activeLegPoints.length > 0 && (!trackingState.activeLegPoints[0].effectiveScheduledTime || !trackingState.activeLegPoints[trackingState.activeLegPoints.length -1].effectiveScheduledTime)) {
+                 console.error("Effective times for leg start/end points are missing after setup.", trackingState.activeLegPoints);
+                 alert(`Horarios incompletos para los extremos de la ruta tras la configuración.`); return false;
+            }
+            return true;
+        }
+        function updateManualNavButtons() {
+            const manualNav = document.getElementById('manualStopNav').checked;
+            const prevBtn = document.getElementById('prevStopBtn'); const nextBtn = document.getElementById('nextStopBtn');
+            if (isTracking && manualNav && trackingState.activeLegPoints && trackingState.activeLegPoints.length > 0) {
+                prevBtn.style.display = 'inline-flex'; nextBtn.style.display = 'inline-flex';
+                prevBtn.disabled = currentSegmentStartIndex === 0;
+                nextBtn.disabled = currentSegmentStartIndex >= trackingState.activeLegPoints.length - 1;
+            } else { prevBtn.style.display = 'none'; nextBtn.style.display = 'none'; }
+        }
+        function handlePositionUpdate(position) {
+            lastKnownPosition = position;
+            const { latitude, longitude, speed } = position.coords;
+            if (!userMarker) userMarker = L.marker([latitude, longitude], { icon: createUserLocationIcon() }).addTo(map);
+            else userMarker.setLatLng([latitude, longitude]);
+            document.getElementById('speedDisplay').textContent = `🚗 ${(speed ? (speed * 3.6) : 0).toFixed(1)} KM/H`;
+            if (!isTracking || !trackingState.activeLegPoints || trackingState.activeLegPoints.length === 0) return;
+            const manualNav = document.getElementById('manualStopNav').checked;
+            if (!manualNav) {
+                if (currentSegmentStartIndex >= trackingState.activeLegPoints.length - 1) { handleEndOfRoute(); if (!isTracking) return; }
+                else {
+                    const nextStopInfo = getNextDisplayableStop();
+                    if (nextStopInfo.point) {
+                        const distanceToTarget = L.latLng(latitude, longitude).distanceTo(L.latLng(nextStopInfo.point.lat, nextStopInfo.point.lng));
+                        if (distanceToTarget < currentStopRadius) {
+                            currentSegmentStartIndex = nextStopInfo.index;
+                            if (currentSegmentStartIndex >= trackingState.activeLegPoints.length - 1) { handleEndOfRoute(); if (!isTracking) return; }
+                        }
+                    }
+                }
+            }
+            if (isTracking) { 
+                calculateTimeDeviation(position); 
+                highlightNextStopInList(); 
+                updateManualNavButtons();
+                updateTrackingStopsList();
+                if (isEtaDebugVisible) { updateEtaDebugInfo(); }
+            }
+        }
+        function advanceToNextActivePoint() {
+            const nextStopInfo = getNextDisplayableStop();
+            if (nextStopInfo.point) {
+                currentSegmentStartIndex = nextStopInfo.index;
+            } else if (currentSegmentStartIndex < trackingState.activeLegPoints.length - 1) {
+                currentSegmentStartIndex = trackingState.activeLegPoints.length - 1;
+            }
+            if (currentSegmentStartIndex >= trackingState.activeLegPoints.length - 1 ) { handleEndOfRoute(); }
+        }
+        function handleEndOfRoute() { if (!isTracking) return; stopTracking(true); }
+        function goToPreviousActivePoint() {
+            if (!isTracking || currentSegmentStartIndex === 0) return;
+            let prevStopIndex = -1;
+            for (let i = currentSegmentStartIndex - 1; i >= 0; i--) {
+                if (trackingState.activeLegPoints[i].pointCategory !== 'waypoint') {
+                    let targetIndex = -1;
+                    for (let j = i - 1; j >= 0; j--) {
+                        if (trackingState.activeLegPoints[j].pointCategory !== 'waypoint') {
+                            targetIndex = j; break;
+                        }
+                    }
+                    prevStopIndex = (targetIndex !== -1) ? targetIndex : 0;
+                    break;
+                }
+            }
+            if(prevStopIndex === -1 && currentSegmentStartIndex > 0) prevStopIndex = 0;
+            
+            if(prevStopIndex !== -1) currentSegmentStartIndex = prevStopIndex;
+
+            if (lastKnownPosition) calculateTimeDeviation(lastKnownPosition);
+            highlightNextStopInList(); updateManualNavButtons(); updateTrackingStopsList();
+            if (isEtaDebugVisible) updateEtaDebugInfo();
+        }
+        function goToNextActivePoint() {
+            if (!isTracking || !trackingState.activeLegPoints || currentSegmentStartIndex >= trackingState.activeLegPoints.length -1 ) return;
+            advanceToNextActivePoint();
+            if (isTracking) { 
+                if (lastKnownPosition) calculateTimeDeviation(lastKnownPosition); 
+                highlightNextStopInList(); 
+                updateManualNavButtons(); 
+                updateTrackingStopsList();
+                if (isEtaDebugVisible) updateEtaDebugInfo();
+            }
+        }
+
+        // --- CÁLCULO MEJORADO DE DESVÍO HORARIO BASADO EN PORCENTAJE RECORRIDO ---
+        function calculateTimeDeviation(currentUserGeoPosition) {
+            lastDeviationCalculation = {};
+
+            if (!isTracking || !trackingState.activeLegPoints || trackingState.activeLegPoints.length === 0 || !currentUserGeoPosition) {
+                latestDeviationMillis = null;
+                lastDeviationCalculation.reason = "Seguimiento inactivo o sin datos.";
+                return;
+            }
+
+            const currentTime = new Date().getTime();
+            const legPoints = trackingState.activeLegPoints;
+            let pointA = null, pointB = null;
+
+            // Encontrar punto A (última parada no-waypoint con horario)
+            for (let i = currentSegmentStartIndex; i >= 0; i--) {
+                if (legPoints[i].pointCategory !== 'waypoint' && legPoints[i].effectiveScheduledTime) {
+                    pointA = legPoints[i];
+                    break;
+                }
+            }
+            if (!pointA && legPoints[0] && legPoints[0].pointCategory !== 'waypoint' && legPoints[0].effectiveScheduledTime) {
+                pointA = legPoints[0];
+            }
+            
+            // Encontrar punto B (próxima parada no-waypoint con horario)
+            for (let i = currentSegmentStartIndex + 1; i < legPoints.length; i++) {
+                if (legPoints[i].pointCategory !== 'waypoint' && legPoints[i].effectiveScheduledTime) {
+                    pointB = legPoints[i];
+                    break;
+                }
+            }
+            if (!pointB && legPoints[legPoints.length - 1] && legPoints[legPoints.length - 1].pointCategory !== 'waypoint' && legPoints[legPoints.length - 1].effectiveScheduledTime) {
+                if (!pointA || pointA.id !== legPoints[legPoints.length - 1].id) {
+                    pointB = legPoints[legPoints.length - 1];
+                }
+            }
+
+            if (!pointA || !pointB) {
+                let reason = "No se pudo determinar un segmento A->B válido.";
+                if (pointA && pointA.effectiveScheduledTime) {
+                    latestDeviationMillis = new Date(pointA.effectiveScheduledTime).getTime() - currentTime;
+                    reason = `Solo se encontró el punto A (${pointA.name}). Desvío respecto a su hora.`;
+                } else if (pointB && pointB.effectiveScheduledTime) {
+                    latestDeviationMillis = new Date(pointB.effectiveScheduledTime).getTime() - currentTime;
+                    reason = `Solo se encontró el punto B (${pointB.name}). Desvío respecto a su hora.`;
+                } else {
+                    latestDeviationMillis = null;
+                }
+                lastDeviationCalculation = { deviation: latestDeviationMillis, reason: reason, pointA: pointA?.name, pointB: pointB?.name };
+                return;
+            }
+            
+            if (pointA.id === pointB.id) {
+                latestDeviationMillis = new Date(pointA.effectiveScheduledTime).getTime() - currentTime;
+                lastDeviationCalculation = { deviation: latestDeviationMillis, reason: "Punto A y B son el mismo.", pointA: pointA.name, pointB: pointB.name };
+                return;
+            }
+            
+            lastDeviationCalculation.pointA = pointA.name;
+            lastDeviationCalculation.pointB = pointB.name;
+            
+            const timeA = new Date(pointA.effectiveScheduledTime).getTime();
+            const timeB = new Date(pointB.effectiveScheduledTime).getTime();
+            const segmentTotalScheduledMillis = timeB - timeA;
+
+            if (segmentTotalScheduledMillis <= 0) {
+                latestDeviationMillis = timeB - currentTime;
+                const reason = segmentTotalScheduledMillis < 0 ? "El segmento tiene duración negativa. Usando hora de B." : "El segmento tiene duración cero. Usando hora de A/B.";
+                lastDeviationCalculation = { deviation: latestDeviationMillis, reason: reason, ...lastDeviationCalculation };
+                return;
+            }
+            
+            const userLatLng = L.latLng(currentUserGeoPosition.coords.latitude, currentUserGeoPosition.coords.longitude);
+            const pointALatLng = L.latLng(pointA.lat, pointA.lng);
+            const pointBLatLng = L.latLng(pointB.lat, pointB.lng);
+
+            const segmentTotalDistance = pointALatLng.distanceTo(pointBLatLng);
+            let progressPercentage;
+
+            if (segmentTotalDistance < 1.0) {
+                progressPercentage = userLatLng.distanceTo(pointALatLng) < userLatLng.distanceTo(pointBLatLng) ? 0.0 : 1.0;
+                lastDeviationCalculation.reason = "Distancia del segmento A-B casi cero. Estimando progreso.";
+            } else {
+                // Cálculo mejorado de proyección del punto de usuario sobre el segmento A-B
+                const pA_x = pointALatLng.lng; const pA_y = pointALatLng.lat;
+                const pB_x = pointBLatLng.lng; const pB_y = pointBLatLng.lat;
+                const user_x = userLatLng.lng; const user_y = userLatLng.lat;
+
+                const d_ab_x = pB_x - pA_x;
+                const d_ab_y = pB_y - pA_y;
+                const d_au_x = user_x - pA_x;
+                const d_au_y = user_y - pA_y;
+
+                const dot = d_au_x * d_ab_x + d_au_y * d_ab_y;
+                const len_sq = d_ab_x * d_ab_x + d_ab_y * d_ab_y;
+                
+                const t = len_sq !== 0 ? dot / len_sq : -1;
+
+                // Limitar t entre 0 y 1 para que el progreso esté siempre dentro del segmento
+                progressPercentage = Math.max(0, Math.min(1, t));
+
+                lastDeviationCalculation.reason = "Proyección mejorada sobre segmento A-B basada en porcentaje recorrido.";
+                lastDeviationCalculation.projectionFactor_t = t;
+            }
+            
+            lastDeviationCalculation.segmentTotalDistance = segmentTotalDistance;
+            lastDeviationCalculation.progressPercentage = progressPercentage;
+
+            // CÁLCULO MEJORADO: Tiempo esperado basado en el porcentaje recorrido de la ruta
+            const expectedTimeAtCurrentPosition = timeA + (segmentTotalScheduledMillis * progressPercentage);
+            latestDeviationMillis = expectedTimeAtCurrentPosition - currentTime;
+            lastDeviationCalculation.deviation = latestDeviationMillis;
+            lastDeviationCalculation.expectedTime = new Date(expectedTimeAtCurrentPosition);
+            lastDeviationCalculation.currentTime = new Date(currentTime);
+        }
+
+        function updateDeviationDisplay() {
+            if (!isTracking) {
+                document.getElementById('timeDeviation').textContent = "00:00";
+                document.getElementById('timeDeviation').style.color = "var(--text-primary)";
+                return;
+            }
+            if (latestDeviationMillis === null) {
+                document.getElementById('timeDeviation').textContent = "Calculando...";
+                document.getElementById('timeDeviation').style.color = "var(--text-muted)";
+                return;
+            }
+            displayDeviation(latestDeviationMillis);
+        }
+
+        function displayDeviation(deviationMillis) {
+            const absMillis = Math.abs(deviationMillis); 
+            const totalSecondsValue = Math.floor(absMillis / 1000);
+            const displaySeconds = totalSecondsValue % 60; 
+            const totalMinutesValue = Math.floor(totalSecondsValue / 60);
+            const sign = deviationMillis >= 0 ? "+" : "-";
+            const formattedDeviation = `${sign}${String(totalMinutesValue).padStart(2, '0')}:${String(displaySeconds).padStart(2, '0')}`;
+            
+            const deviationDiv = document.getElementById('timeDeviation');
+            deviationDiv.textContent = formattedDeviation;
+            
+            // Colores mejorados para el desvío
+            if (deviationMillis > 59999) {
+                deviationDiv.style.color = "var(--color-secondary)"; // Adelantado (verde)
+            } else if (deviationMillis < -59999) {
+                deviationDiv.style.color = "var(--color-danger)"; // Atrasado (rojo)
+            } else {
+                deviationDiv.style.color = "var(--color-accent)"; // En tiempo (amarillo)
+            }
+        }
+
+        function updateTrackingStopsList() {
+            if (!isTracking) return;
+            const listDiv = document.getElementById('trackingStopsList');
+            const displayPoints = trackingState.activeLegPoints.filter(p => p.pointCategory !== 'waypoint');
+            if (displayPoints.length === 0) { listDiv.innerHTML = ""; return; }
+            
+            const nowMillis = new Date().getTime();
+            const nextStopInfo = getNextDisplayableStop();
+
+            const startPoint = trackingState.activeLegPoints.find(p => p.pointCategory === 'lineEndpoint' && p.isStartPoint);
+            let isWaitingAtStartPoint = false;
+            if (startPoint && lastKnownPosition && currentSegmentStartIndex === 0 && (latestDeviationMillis || 0) > 0) {
+                const userLatLng = L.latLng(lastKnownPosition.coords.latitude, lastKnownPosition.coords.longitude);
+                const startPointLatLng = L.latLng(startPoint.lat, startPoint.lng);
+                if (userLatLng.distanceTo(startPointLatLng) < currentStopRadius) {
+                    isWaitingAtStartPoint = true;
+                }
+            }
+            
+            let html = "";
+            displayPoints.forEach(point => {
+                const pointIndexInFullPath = trackingState.activeLegPoints.findIndex(p => p.id === point.id);
+                const isPassed = pointIndexInFullPath <= currentSegmentStartIndex;
+                
+                let etaString = "—";
+                let etaClass = "";
+
+                if (!isPassed && point.effectiveScheduledTime) {
+                    const scheduledMillis = new Date(point.effectiveScheduledTime).getTime();
+                    const deviationMillis = latestDeviationMillis || 0;
+                    const timeRemainingMillis = scheduledMillis - nowMillis;
+                    
+                    let etaMillis;
+                    if (isWaitingAtStartPoint && deviationMillis > 0) etaMillis = timeRemainingMillis;
+                    else etaMillis = timeRemainingMillis - deviationMillis;
+
+                    if (etaMillis < 0) etaMillis = 0; 
+                    
+                    if (etaMillis < 60000) {
+                        etaString = "ARRIBANDO";
+                        etaClass = "style='color: var(--color-danger); font-weight: 700;'";
+                    } else if (etaMillis < 300000) { // Menos de 5 minutos
+                        etaString = `${Math.round(etaMillis / 60000)} min.`;
+                        etaClass = "style='color: var(--color-accent); font-weight: 600;'";
+                    } else {
+                        etaString = `${Math.round(etaMillis / 60000)} min.`;
+                        etaClass = "style='color: var(--color-secondary);'";
+                    }
+                }
+                
+                let rowClass = "tracking-stop-row";
+                if(nextStopInfo.point && nextStopInfo.point.id === point.id) rowClass += " is-next-stop";
+
+                const icon = point.pointCategory === 'lineEndpoint' ? (point.isStartPoint ? '🟢' : '🔴') : '🚏';
+
+                html += `<div class="${rowClass}">
+                        <span class="tracking-stop-name">${icon} ${point.name}</span>
+                        <span class="tracking-stop-time">${formatTime(point.effectiveScheduledTime, false)}</span>
+                        <span class="tracking-stop-eta" ${etaClass}>${etaString}</span>
+                    </div>`;
+            });
+            listDiv.innerHTML = html;
+        }
+
+        // --- FUNCIONES PARA DEBUG ETA MEJORADAS ---
+        function formatMillisToMMSS(millis) {
+            if (millis === null || typeof millis === 'undefined' || isNaN(millis)) return "N/A";
+            const totalSeconds = Math.floor(Math.abs(millis) / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            const sign = millis < 0 ? "-" : "";
+            return `${sign}${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        window.toggleEtaDebug = function() {
+            isEtaDebugVisible = !isEtaDebugVisible;
+            const debugPanel = document.getElementById('etaDebugPanel');
+            const debugBtn = document.getElementById('toggleEtaDebugBtn');
+            if (isEtaDebugVisible) {
+                debugPanel.style.display = 'block';
+                debugBtn.textContent = '🐛 Ocultar Debug';
+                debugBtn.classList.remove('btn-accent'); debugBtn.classList.add('btn-danger');
+                updateEtaDebugInfo(); 
+            } else {
+                debugPanel.style.display = 'none';
+                debugBtn.textContent = '🐛 Debug ETA';
+                debugBtn.classList.remove('btn-danger'); debugBtn.classList.add('btn-accent');
+                debugPanel.innerHTML = ''; 
+            }
+        }
+
+        function updateEtaDebugInfo() {
+            if (!isEtaDebugVisible || !isTracking) {
+                const debugPanel = document.getElementById('etaDebugPanel');
+                if(debugPanel) debugPanel.innerHTML = '<p style="text-align: center; color: var(--text-muted);">El seguimiento no está activo o el debug está oculto.</p>';
+                return;
+            }
+
+            const debugPanel = document.getElementById('etaDebugPanel');
+            let debugHtml = `<h4>🔍 Análisis de Desvío Horario</h4>`;
+            const nowMillis = new Date().getTime();
+            const deviationMillisForCalc = latestDeviationMillis === null ? 0 : latestDeviationMillis;
+
+            debugHtml += `<p><strong>⏱️ Desvío Actual:</strong> ${latestDeviationMillis === null ? 'N/A' : latestDeviationMillis.toFixed(0)} ms (${formatMillisToMMSS(latestDeviationMillis)})</p>`;
+            debugHtml += `<p><strong>📍 Índice Punto Actual:</strong> ${currentSegmentStartIndex}</p>`;
+            
+            debugHtml += `<hr><h4>📊 Cálculo de Progreso Mejorado</h4>`;
+            if (lastDeviationCalculation && lastDeviationCalculation.progressPercentage !== undefined) {
+                debugHtml += `<p><strong>🛣️ Segmento:</strong> ${lastDeviationCalculation.pointA || 'N/A'} → ${lastDeviationCalculation.pointB || 'N/A'}</p>`;
+                debugHtml += `<p><strong>🔧 Método:</strong> ${lastDeviationCalculation.reason || 'N/A'}</p>`;
+                debugHtml += `<p><strong>📏 Distancia A-B:</strong> ${lastDeviationCalculation.segmentTotalDistance?.toFixed(0) || 'N/A'} m</p>`;
+                if (lastDeviationCalculation.projectionFactor_t !== undefined) {
+                    debugHtml += `<p><strong>🎯 Factor Proyección (t):</strong> ${lastDeviationCalculation.projectionFactor_t.toFixed(4)}</p>`;
+                }
+                debugHtml += `<p style="font-weight: bold; color: var(--color-primary);">📈 Porcentaje Recorrido: ${(lastDeviationCalculation.progressPercentage * 100).toFixed(1)}%</p>`;
+                if (lastDeviationCalculation.expectedTime && lastDeviationCalculation.currentTime) {
+                    debugHtml += `<p><strong>⏰ Hora Esperada:</strong> ${formatTime(lastDeviationCalculation.expectedTime, false)}</p>`;
+                    debugHtml += `<p><strong>🕐 Hora Actual:</strong> ${formatTime(lastDeviationCalculation.currentTime, false)}</p>`;
+                }
+            } else {
+                debugHtml += `<p style="color: var(--text-muted);"><em>${lastDeviationCalculation.reason || 'Esperando datos de cálculo de progreso...'}</em></p>`;
+            }
+            debugHtml += `<hr>`;
+
+            debugPanel.innerHTML = debugHtml;
+        }
+
+        function handleGeolocationError(error) {
+            console.error("Error de geolocalización: ", error); 
+            alert(`❌ Error de geolocalización: ${error.message}.`);
+            if (isTracking) stopTracking(false, "Error de geolocalización");
+        }
+        function getRouteQueue() { const q = localStorage.getItem(ROUTE_QUEUE_CACHE_KEY); return q ? JSON.parse(q) : [];}
+        function saveRouteQueue(queue) { localStorage.setItem(ROUTE_QUEUE_CACHE_KEY, JSON.stringify(queue)); updateRouteQueueDisplay();}
+        function addRouteToQueue() {
+            const selectedRouteName = document.getElementById('routeToQueue').value;
+            if (!selectedRouteName || document.getElementById('routeToQueue').options[0]?.disabled) { alert("Selecciona una ruta válida para añadir."); return; }
+            const queue = getRouteQueue(); if (queue.includes(selectedRouteName)) { alert("Ruta ya en cola."); return; }
+            queue.push(selectedRouteName); saveRouteQueue(queue); alert(`✅ Ruta "${selectedRouteName}" añadida a la cola.`);
+        }
+        function updateRouteQueueDisplay() {
+            const queueDiv = document.getElementById('routeQueueDisplay'); const queue = getRouteQueue();
+            if (queue.length === 0) { 
+                queueDiv.innerHTML = "<p style='color: var(--text-muted); text-align: center; margin: 0;'>📭 Cola vacía</p>"; 
+            } else { 
+                let html = "<ol style='padding-left: 20px; margin: 0; color: var(--text-secondary);'>"; 
+                queue.forEach((rn, index) => { 
+                    html += `<li style='margin-bottom: var(--spacing-xs);'>${rn}</li>`; 
+                }); 
+                html += "</ol>"; 
+                queueDiv.innerHTML = html; 
+            }
+        }
+        function clearRouteQueue() { if (confirm("¿Limpiar toda la cola de rutas?")) saveRouteQueue([]);}
+        function checkRouteQueue() {
+            let queue = getRouteQueue();
+            if (queue.length > 0) {
+                const nextRouteName = queue.shift(); saveRouteQueue(queue);
+                if (confirm(`🎉 Ruta finalizada. ¿Iniciar siguiente ruta de la cola: "${nextRouteName}"?`)) {
+                    document.getElementById('savedRoutes').value = nextRouteName; 
+                    loadRoute();
+                    setTimeout(() => {
+                        const startPoint = routePoints.find(p => p.pointCategory === 'lineEndpoint' && p.isStartPoint);
+                        const endPoint = routePoints.find(p => p.pointCategory === 'lineEndpoint' && !p.isStartPoint);
+                        if (startPoint && endPoint && getEndpointScheduledTime(startPoint) && getEndpointScheduledTime(endPoint)) {
+                            startTracking();
+                        } else {
+                            alert(`❌ Error al cargar la ruta "${nextRouteName}" de la cola o sus horarios son inválidos.`);
+                        }
+                    }, 500);
+                }
+            }
+        }
+        
+        // --- FUNCIONES DE PANTALLA COMPLETA Y LAYOUT HORIZONTAL MEJORADAS ---
+        function toggleFullScreen() {
+            const elem = document.documentElement;
+            const btn = document.getElementById('fullscreenBtn');
+            if (!document.fullscreenElement) {
+                elem.requestFullscreen().catch(err => {
+                    alert(`❌ Error: ${err.message} (${err.name})`);
+                });
+            } else if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+
+        function checkOrientationAndApplyLayout() {
+            if (isTracking) {
+                const isLandscape = window.matchMedia("(orientation: landscape)").matches;
+                if (isLandscape) {
+                    document.body.classList.add('is-tracking-landscape');
+                } else {
+                    document.body.classList.remove('is-tracking-landscape', 'show-map-landscape');
+                    isMapVisibleInLandscape = false;
+                    document.getElementById('toggleMapLandscapeBtn').textContent = '🗺️ Mapa';
+                }
+                setTimeout(() => { if (map) map.invalidateSize() }, 450);
+            }
+        }
+        
+        function toggleMapLandscapeView() {
+            isMapVisibleInLandscape = !isMapVisibleInLandscape;
+            const btn = document.getElementById('toggleMapLandscapeBtn');
+            if (isMapVisibleInLandscape) {
+                document.body.classList.add('show-map-landscape');
+                btn.textContent = '📊 Panel';
+            } else {
+                document.body.classList.remove('show-map-landscape');
+                btn.textContent = '🗺️ Mapa';
+            }
+            setTimeout(() => { if (map) map.invalidateSize() }, 450);
+        }
+
+        // --- INICIALIZACIÓN MEJORADA ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            loadSavedRoutesLists();
+            updateStopsList();
+            updateManualNavButtons();
+
+            // Listeners para layout y pantalla completa
+            window.addEventListener('resize', checkOrientationAndApplyLayout);
+            window.addEventListener('orientationchange', checkOrientationAndApplyLayout);
+            document.addEventListener('fullscreenchange', () => {
+                const btn = document.getElementById('fullscreenBtn');
+                if (!document.fullscreenElement) {
+                    btn.textContent = '🖥️ Pantalla Completa';
+                } else {
+                    btn.textContent = '🖥️ Salir de Pantalla Completa';
+                }
+            });
+
+            // Añadir efectos de carga
+            document.body.classList.add('fade-in');
+        });
+
+    </script>
+</body>
+</html>
+
