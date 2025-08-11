@@ -186,7 +186,7 @@
 
         // --- INICIALIZACIÓN ---
         function initializeMap() {
-            map = L.map(mapElement).setView([-34.6037, -58.3816], 13); // Centrado en Buenos Aires
+            map = L.map(mapElement).setView([-34.6037, -58.3816], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '© OpenStreetMap'
@@ -201,7 +201,7 @@
             if (viewName === 'creation') {
                 creationView.classList.remove('hidden');
             } else {
-                navigationView.style.display = 'flex'; // Usamos flex para centrar
+                navigationView.style.display = 'flex';
                 navigationView.classList.remove('hidden');
             }
         }
@@ -258,11 +258,11 @@
                 const time = prompt('Hora de la parada (HH:MM) - Déjalo en blanco para autocalcular:');
                 if (time && !isValidTime(time)) { alert('Hora inválida. Inténtalo de nuevo.'); return; }
                 point.name = name;
-                point.time = time || null; // Guardar como null si está vacío
+                point.time = time || null;
                 marker = L.marker([lat, lng], { icon: createIcon('blue') }).addTo(map);
             }
             
-            point.type = creationState; // 'set_start', 'set_end', 'set_intermediate'
+            point.type = creationState.replace('set_', '');
             tempPoints.push(point);
             tempMarkers.push(marker);
             marker.bindPopup(`<b>${point.name}</b><br>${point.time || 'A calcular'}`).openPopup();
@@ -279,7 +279,6 @@
                 return;
             }
 
-            // Lógica para calcular tiempos intermedios
             const calculatedPoints = calculateIntermediateTimes(tempPoints);
 
             const route = {
@@ -292,35 +291,45 @@
             routes.push(route);
             saveRoutesToStorage(routes);
             loadRoutesIntoSelector();
-            cancelCreation(); // Resetea la interfaz
+            cancelCreation();
             statusMessage.textContent = `Ruta "${routeName}" guardada!`;
         }
         
         function calculateIntermediateTimes(points) {
-            const startPoint = points.find(p => p.type === 'set_start');
-            const endPoint = points.find(p => p.type === 'set_end');
-            
-            if (!startPoint || !endPoint) return points; // No se puede calcular
+            const startPoint = points.find(p => p.type === 'start');
+            const endPoint = points.find(p => p.type === 'end');
+            let intermediatePoints = points.filter(p => p.type === 'intermediate');
 
+            if (!startPoint || !endPoint) return points;
+
+            // **CORRECCIÓN 1: Ordenar paradas intermedias por su distancia al punto de inicio**
+            intermediatePoints.sort((a, b) => {
+                const distA = L.latLng(startPoint.lat, startPoint.lng).distanceTo(L.latLng(a.lat, a.lng));
+                const distB = L.latLng(startPoint.lat, startPoint.lng).distanceTo(L.latLng(b.lat, b.lng));
+                return distA - distB;
+            });
+            
+            const fullPath = [startPoint, ...intermediatePoints, endPoint];
+            
             const startTime = parseTimeToDate(startPoint.time);
             const endTime = parseTimeToDate(endPoint.time);
+            if (endTime <= startTime) {
+                endTime.setDate(endTime.getDate() + 1); // Manejar recorridos que cruzan la medianoche
+            }
             const totalDurationMinutes = (endTime - startTime) / 60000;
-
-            const fullPath = [startPoint, ...points.filter(p => p.type === 'set_intermediate'), endPoint];
+            
             let totalDistance = 0;
             for (let i = 0; i < fullPath.length - 1; i++) {
                 totalDistance += L.latLng(fullPath[i].lat, fullPath[i].lng).distanceTo(L.latLng(fullPath[i+1].lat, fullPath[i+1].lng));
             }
-            
-            if(totalDistance === 0) return points;
+
+            if(totalDistance === 0) return fullPath;
 
             let cumulativeDistance = 0;
-            for (let i = 0; i < fullPath.length; i++) {
-                if (i > 0) {
-                    cumulativeDistance += L.latLng(fullPath[i-1].lat, fullPath[i-1].lng).distanceTo(L.latLng(fullPath[i].lat, fullPath[i].lng));
-                }
-
-                if (fullPath[i].type === 'set_intermediate' && !fullPath[i].time) {
+            for (let i = 1; i < fullPath.length; i++) {
+                cumulativeDistance += L.latLng(fullPath[i-1].lat, fullPath[i-1].lng).distanceTo(L.latLng(fullPath[i].lat, fullPath[i].lng));
+                
+                if (fullPath[i].type === 'intermediate' && !fullPath[i].time) {
                     const distanceRatio = cumulativeDistance / totalDistance;
                     const timeOffsetMinutes = totalDurationMinutes * distanceRatio;
                     const calculatedTime = new Date(startTime.getTime() + timeOffsetMinutes * 60000);
@@ -329,7 +338,6 @@
             }
             return fullPath;
         }
-
 
         // --- LÓGICA DE NAVEGACIÓN ---
         function startNavigation() {
@@ -342,10 +350,7 @@
             const routes = getRoutesFromStorage();
             currentNavigationRoute = routes.find(r => r.id == selectedRouteId);
             
-            if (!currentNavigationRoute) {
-                alert('Ruta no encontrada. Intenta de nuevo.');
-                return;
-            }
+            if (!currentNavigationRoute) { alert('Ruta no encontrada.'); return; }
             
             currentSegmentIndex = 0;
             switchView('navigation');
@@ -356,10 +361,8 @@
         }
 
         function stopNavigation() {
-            if (navigationWatchId) {
-                navigator.geolocation.clearWatch(navigationWatchId);
-                navigationWatchId = null;
-            }
+            if (navigationWatchId) navigator.geolocation.clearWatch(navigationWatchId);
+            navigationWatchId = null;
             currentNavigationRoute = null;
             switchView('creation');
         }
@@ -368,79 +371,64 @@
             const { latitude, longitude, speed } = position.coords;
             const now = new Date();
             
-            // Actualizar segmento actual
             updateCurrentSegment(latitude, longitude);
 
             const stopA = currentNavigationRoute.stops[currentSegmentIndex];
             const stopB = currentNavigationRoute.stops[currentSegmentIndex + 1];
 
             if (!stopA || !stopB) {
-                // Llegó al final
                 stopNavigation();
                 alert("Recorrido finalizado!");
                 return;
             }
 
-            // Calcular desvío
             const timeA = parseTimeToDate(stopA.time);
             const timeB = parseTimeToDate(stopB.time);
+            if (timeB <= timeA) timeB.setDate(timeB.getDate() + 1);
+            if (now.getHours() < timeA.getHours()) now.setDate(now.getDate() + 1);
+
             const totalSegmentDuration = timeB - timeA;
-            
-            const distanceToA = L.latLng(latitude, longitude).distanceTo(L.latLng(stopA.lat, stopA.lng));
             const distanceTotalSegment = L.latLng(stopA.lat, stopA.lng).distanceTo(L.latLng(stopB.lat, stopB.lng));
-            
+            const distanceToB = L.latLng(latitude, longitude).distanceTo(L.latLng(stopB.lat, stopB.lng));
+
             let distanceRatio = 0;
             if (distanceTotalSegment > 0) {
-                 // Usamos una proyección para más precisión, pero una aproximación por distancia funciona
-                 // Para simplificar, asumimos que estamos avanzando.
-                 // Una mejor forma sería proyectar el punto en la línea A-B.
-                 // Por ahora, lo calcularemos como una proporción de la distancia restante a B.
-                 const distanceToB = L.latLng(latitude, longitude).distanceTo(L.latLng(stopB.lat, stopB.lng));
                  distanceRatio = 1 - (distanceToB / distanceTotalSegment);
-                 // Clamp para evitar valores extraños si nos desviamos de la ruta
                  distanceRatio = Math.max(0, Math.min(1, distanceRatio));
             }
 
             const idealTimeAtCurrentPos = new Date(timeA.getTime() + totalSegmentDuration * distanceRatio);
-            const deviationInSeconds = Math.round((now - idealTimeAtCurrentPos) / 1000);
+            
+            // **CORRECCIÓN 2: Lógica de desvío invertida para que + sea adelantado**
+            const deviationInSeconds = Math.round((idealTimeAtCurrentPos - now) / 1000);
 
-            // Actualizar UI
-            updateNavigationUI(deviationInSeconds, speed, now);
+            updateNavigationUI(deviationInSeconds, speed);
         }
 
         function updateCurrentSegment(lat, lng) {
-            if (!currentNavigationRoute || currentSegmentIndex >= currentNavigationRoute.stops.length - 1) {
-                return;
-            }
+            if (!currentNavigationRoute || currentSegmentIndex >= currentNavigationRoute.stops.length - 1) return;
             
             const nextStop = currentNavigationRoute.stops[currentSegmentIndex + 1];
             const distanceToNextStop = L.latLng(lat, lng).distanceTo(L.latLng(nextStop.lat, nextStop.lng));
-
-            // Si estamos a menos de 50 metros de la siguiente parada, avanzamos al próximo segmento
-            if (distanceToNextStop < 50) {
-                currentSegmentIndex++;
-            }
+            if (distanceToNextStop < 50) currentSegmentIndex++;
         }
 
-        function updateNavigationUI(deviationSeconds, speed, currentTime) {
-            // Actualizar display de desvío
+        function updateNavigationUI(deviationSeconds, speed) {
             if (deviationSeconds !== undefined) {
                 deviationDisplay.textContent = formatSecondsToDeviation(deviationSeconds);
-                deviationDisplay.className = 'deviation-display'; // Reset
-                if (deviationSeconds <= -240) { // -4:00 o más atrasado
+                deviationDisplay.className = 'deviation-display';
+                if (deviationSeconds <= -240) { // Atrasado
                     deviationDisplay.classList.add('delayed');
-                } else if (deviationSeconds >= 240) { // +4:00 o más adelantado
+                } else if (deviationSeconds >= 240) { // Adelantado
                     deviationDisplay.classList.add('ahead');
                 } else {
                     deviationDisplay.classList.add('on-time');
                 }
             }
 
-            // Actualizar velocidad
             const speedKmh = speed ? (speed * 3.6).toFixed(0) : '0';
             speedDisplay.textContent = `${speedKmh} km/h`;
             
-            // Actualizar nombre de ruta y paradas
             routeNameDisplay.textContent = currentNavigationRoute.name;
             upcomingStopsList.innerHTML = '';
             for (let i = currentSegmentIndex + 1; i < currentNavigationRoute.stops.length; i++) {
@@ -475,11 +463,8 @@
         }
         function deleteSelectedRoute() {
             const selectedRouteId = routeSelector.value;
-            if (!selectedRouteId) {
-                alert('Selecciona una ruta para borrar.');
-                return;
-            }
-            if (confirm(`¿Estás seguro de que quieres borrar la ruta "${routeSelector.options[routeSelector.selectedIndex].text}"?`)) {
+            if (!selectedRouteId) return alert('Selecciona una ruta para borrar.');
+            if (confirm(`¿Borrar la ruta "${routeSelector.options[routeSelector.selectedIndex].text}"?`)) {
                 let routes = getRoutesFromStorage();
                 routes = routes.filter(r => r.id != selectedRouteId);
                 saveRoutesToStorage(routes);
@@ -490,8 +475,7 @@
 
         // --- FUNCIONES DE AYUDA (helpers) ---
         function isValidTime(timeStr) {
-            if (!timeStr) return false;
-            return /^([01]\d|2[0-3]):([0-5]\d)$/.test(timeStr);
+            return timeStr && /^([01]\d|2[0-3]):([0-5]\d)$/.test(timeStr);
         }
         function parseTimeToDate(timeStr) {
             const [hours, minutes] = timeStr.split(':');
@@ -503,10 +487,7 @@
             return new L.Icon({
                 iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${color}.png`,
                 shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34],
-                shadowSize: [41, 41]
+                iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
             });
         }
         function formatSecondsToDeviation(seconds) {
