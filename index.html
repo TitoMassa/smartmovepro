@@ -697,20 +697,16 @@
                         const scheduledTime = new Date(stop.dateTime);
                         const etaBaseSeconds = (scheduledTime - now) / 1000;
                         
-                        let finalEtaSeconds;
-                        if (lastDeviationSeconds > 0) { // Atrasado, se suma al tiempo programado
-                            finalEtaSeconds = etaBaseSeconds - lastDeviationSeconds;
-                        } else { // Adelantado
-                            if (hasLeftFirstStop) { // En ruta, se resta
-                                finalEtaSeconds = etaBaseSeconds - lastDeviationSeconds;
-                            } else { // "Haciendo hora", se suma al tiempo de espera
-                                finalEtaSeconds = etaBaseSeconds + Math.abs(lastDeviationSeconds);
-                            }
-                        }
+                        // Corrected ETA calculation based on user feedback.
+                        // ETA = (Scheduled Time - Now) + Deviation
+                        const finalEtaSeconds = etaBaseSeconds + lastDeviationSeconds;
 
                         let displayEta;
-                        if (finalEtaSeconds <= 59) displayEta = "ARRIBANDO";
-                        else displayEta = `${Math.floor(finalEtaSeconds / 60)} min.`;
+                        if (finalEtaSeconds <= 59) {
+                            displayEta = "ARRIBANDO";
+                        } else {
+                            displayEta = `${Math.floor(finalEtaSeconds / 60)} min.`;
+                        }
                         
                         const row = document.createElement('tr');
                         row.innerHTML = `
