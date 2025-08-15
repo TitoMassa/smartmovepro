@@ -697,9 +697,20 @@
                         const scheduledTime = new Date(stop.dateTime);
                         const etaBaseSeconds = (scheduledTime - now) / 1000;
                         
-                        // Corrected ETA calculation based on user feedback.
-                        // ETA = (Scheduled Time - Now) + Deviation
-                        const finalEtaSeconds = etaBaseSeconds + lastDeviationSeconds;
+                        let finalEtaSeconds;
+                        const isEarly = lastDeviationSeconds < 0;
+                        const hasStarted = currentRecorrido.lastVisitedStopIndex >= 0;
+
+                        if (isEarly && !hasStarted) {
+                            // Special case: Early and waiting at the start ("haciendo hora").
+                            // Per user instruction, ADD the earliness to the ETA.
+                            // Since deviation is negative, we subtract it to add its magnitude.
+                            finalEtaSeconds = etaBaseSeconds - lastDeviationSeconds;
+                        } else {
+                            // Standard calculation for all other cases (late, or early and in-route).
+                            // Add lateness (positive deviation), subtract earliness (negative deviation).
+                            finalEtaSeconds = etaBaseSeconds + lastDeviationSeconds;
+                        }
 
                         let displayEta;
                         if (finalEtaSeconds <= 59) {
