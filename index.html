@@ -552,7 +552,7 @@
                     alert("Selecciona un recorrido con al menos 2 puntos para iniciar.");
                     return;
                 }
-                currentRecorrido = { name: selectedRecorrido, stops: recorridos[selectedRecorrido], lastVisitedStopIndex: -1, currentTargetIndex: 0 };
+                currentRecorrido = { name: selectedRecorrido, stops: recorridos[selectedRecorrido], lastVisitedStopIndex: -1, currentTargetIndex: 0, trace: [] };
                 startBtn.disabled = true; stopBtn.disabled = false; recorridoSelect.disabled = true; createRecorridoBtn.disabled = true; deleteRecorridoBtn.disabled = true; radiusInput.disabled = true; autoCalcCheckbox.disabled = true;
                 
                 etaContainer.classList.remove('hidden');
@@ -583,7 +583,10 @@
             function updateDriverPosition(position) {
                 currentDriverLatLng = L.latLng(position.coords.latitude, position.coords.longitude);
                 driverMarker.setLatLng(currentDriverLatLng);
-                if (currentRecorrido) checkRecorridoStatus(currentDriverLatLng);
+                if (currentRecorrido) {
+                    currentRecorrido.trace.push(currentDriverLatLng);
+                    checkRecorridoStatus(currentDriverLatLng);
+                }
             }
 
             function checkRecorridoStatus(driverLatLng) {
@@ -608,23 +611,15 @@
                     currentStopInfo.classList.add('hidden');
                 }
 
-                let closestPointIndex = -1;
-                let minDistance = Infinity;
-                for (let i = currentRecorrido.lastVisitedStopIndex + 1; i < currentRecorrido.stops.length; i++) {
-                    const distance = driverLatLng.distanceTo(L.latLng(currentRecorrido.stops[i].lat, currentRecorrido.stops[i].lng));
-                    if (distance < minDistance) {
-                        minDistance = distance;
-                        closestPointIndex = i;
-                    }
-                }
-                
-                if (closestPointIndex === -1) {
+                const nextIndex = currentRecorrido.lastVisitedStopIndex + 1;
+
+                if (nextIndex >= currentRecorrido.stops.length) {
                     nextStopInfo.textContent = 'Recorrido Finalizado.';
                     updateStatus('FIN', 'ontime');
                     stopTracking();
                     return;
                 }
-                currentRecorrido.currentTargetIndex = closestPointIndex;
+                currentRecorrido.currentTargetIndex = nextIndex;
 
                 let nextDisplayStopIndex = currentRecorrido.lastVisitedStopIndex + 1;
                 while(nextDisplayStopIndex < currentRecorrido.stops.length && currentRecorrido.stops[nextDisplayStopIndex].type !== 'stop') {
@@ -714,8 +709,7 @@
                         }
 
                         let displayEta;
-                        if (finalEtaSeconds < 0) displayEta = "YA PASÓ";
-                        else if (finalEtaSeconds <= 59) displayEta = "ARRIBANDO";
+                        if (finalEtaSeconds <= 59) displayEta = "ARRIBANDO";
                         else displayEta = `${Math.floor(finalEtaSeconds / 60)} min.`;
                         
                         const row = document.createElement('tr');
