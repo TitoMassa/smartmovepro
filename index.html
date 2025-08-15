@@ -81,7 +81,21 @@
                         </div>
                     </div>
 
-                    <div>
+                    <div id="bandera-select-container" class="mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar Bandera:</label>
+                        <div class="flex items-center space-x-4 bg-gray-100 p-2 rounded-lg">
+                            <label class="flex-1 text-center p-2 rounded-md cursor-pointer transition-colors has-[:checked]:bg-indigo-600 has-[:checked]:text-white has-[:checked]:shadow-md">
+                                <input type="radio" name="bandera" value="ida" id="bandera-ida-radio" checked class="sr-only">
+                                <span>Ida</span>
+                            </label>
+                            <label class="flex-1 text-center p-2 rounded-md cursor-pointer transition-colors has-[:checked]:bg-indigo-600 has-[:checked]:text-white has-[:checked]:shadow-md">
+                                <input type="radio" name="bandera" value="vuelta" id="bandera-vuelta-radio" class="sr-only">
+                                <span>Vuelta</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
                         <label for="radius-input" class="block text-sm font-medium text-gray-700 mb-1">Radio de Parada (metros):</label>
                         <input type="number" id="radius-input" value="20" min="5" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
                     </div>
@@ -180,6 +194,7 @@
             let stopRadius = 20;
             let radiusCircles = [];
             let lastDeviationSeconds = 0;
+            let currentBandera = 'ida';
 
             // --- ELEMENTOS DEL DOM ---
             const recorridoSelect = document.getElementById('recorrido-select');
@@ -191,6 +206,8 @@
             const radiusInput = document.getElementById('radius-input');
             const autoCalcCheckbox = document.getElementById('auto-calc-checkbox');
             const stopsList = document.getElementById('stops-list');
+            const banderaIdaRadio = document.getElementById('bandera-ida-radio');
+            const banderaVueltaRadio = document.getElementById('bandera-vuelta-radio');
             const statusIndicator = document.getElementById('status-indicator');
             const currentStopInfo = document.getElementById('current-stop-info');
             const nextStopInfo = document.getElementById('next-stop-info');
@@ -228,7 +245,21 @@
 
             function loadRecorridosFromStorage() {
                 const storedRecorridos = localStorage.getItem('busRecorridos');
-                if (storedRecorridos) recorridos = JSON.parse(storedRecorridos);
+                if (storedRecorridos) {
+                    let loadedRecorridos = JSON.parse(storedRecorridos);
+                    // Migrate old data structure if necessary
+                    for (const name in loadedRecorridos) {
+                        if (Array.isArray(loadedRecorridos[name])) {
+                            console.log(`Migrating old route format for: ${name}`);
+                            const oldPath = loadedRecorridos[name];
+                            loadedRecorridos[name] = {
+                                path: { ida: oldPath, vuelta: [] }
+                            };
+                        }
+                    }
+                    recorridos = loadedRecorridos;
+                    saveRecorridosToStorage(); // Save back the migrated data
+                }
                 updateRecorridoSelector();
             }
 
@@ -273,7 +304,13 @@
 
             function updateStopsList(recorridoName) {
                 stopsList.innerHTML = '';
-                const points = recorridos[recorridoName] || [];
+                const recorrido = recorridos[recorridoName];
+                if (!recorrido || !recorrido.path) {
+                    stopsList.innerHTML = '<li class="text-gray-500">No hay puntos.</li>';
+                    return;
+                }
+                const points = recorrido.path[currentBandera] || [];
+
                 if (points.length === 0) {
                     stopsList.innerHTML = '<li class="text-gray-500">No hay puntos.</li>';
                 } else {
@@ -283,7 +320,7 @@
                         const icon = point.type === 'stop' ? '🅿️' : '➡️';
                         const name = point.name || (point.type === 'stop' ? `Parada ${index + 1}` : `Punto ${index + 1}`);
                         li.innerHTML = `
-                            <span>${icon} ${name} - ${formatDateTime(point.dateTime)}</span>
+                            <span>${icon} ${name}</span>
                             <div>
                                 <button title="Editar Punto" class="stop-item-btn edit-stop-btn text-blue-600" data-index="${index}"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
                                 <button title="Eliminar Punto" class="stop-item-btn delete-stop-btn text-red-600" data-index="${index}"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
@@ -294,7 +331,8 @@
             }
 
             function updateCreationGuide(recorridoName) {
-                const points = recorridos[recorridoName] || [];
+                const recorrido = recorridos[recorridoName];
+                const points = (recorrido && recorrido.path) ? (recorrido.path[currentBandera] || []) : [];
                 let guideText = '';
                 if (recorridoName) {
                     if (points.length === 0) {
@@ -316,7 +354,7 @@
             createRecorridoBtn.addEventListener('click', () => {
                 const recorridoName = newRecorridoNameInput.value.trim();
                 if (recorridoName && !recorridos[recorridoName]) {
-                    recorridos[recorridoName] = [];
+                    recorridos[recorridoName] = { path: { ida: [], vuelta: [] } };
                     saveRecorridosToStorage();
                     newRecorridoNameInput.value = '';
                     updateRecorridoSelector();
@@ -338,6 +376,17 @@
             });
 
             recorridoSelect.addEventListener('change', updateUIForSelectedRecorrido);
+
+            banderaIdaRadio.addEventListener('change', () => {
+                currentBandera = 'ida';
+                updateUIForSelectedRecorrido();
+            });
+
+            banderaVueltaRadio.addEventListener('change', () => {
+                currentBandera = 'vuelta';
+                updateUIForSelectedRecorrido();
+            });
+
             radiusInput.addEventListener('change', () => {
                 stopRadius = parseInt(radiusInput.value) || 20;
                 drawRecorridoOnMap(recorridoSelect.value);
@@ -351,31 +400,26 @@
 
             function onMapClick(e) {
                 const selectedRecorrido = recorridoSelect.value;
-                if (!selectedRecorrido) {
+                if (!selectedRecorrido || !recorridos[selectedRecorrido].path) {
                     alert("Por favor, crea o selecciona un recorrido primero.");
                     return;
                 }
                 tempStopCoords = e.latlng;
                 editingStopIndex = null;
-                const points = recorridos[selectedRecorrido];
+                const points = recorridos[selectedRecorrido].path[currentBandera];
 
+                // Simplified logic for the modal title
                 if (points.length < 2) {
                     modalTitle.textContent = points.length === 0 ? "Definir Primera Parada" : "Definir Última Parada";
                     pointTypeContainer.style.display = 'none';
-                    pointNameContainer.style.display = 'block';
-                    datetimeInputContainer.style.display = 'block';
                 } else {
                     modalTitle.textContent = "Añadir Punto Intermedio";
                     pointTypeContainer.style.display = 'block';
-                    datetimeInputContainer.style.display = autoCalcCheckbox.checked ? 'none' : 'block';
-                    toggleNameForWaypoint();
                 }
+                datetimeInputContainer.style.display = 'none'; // Always hide time inputs now
                 
                 pointTypeSelect.value = 'stop';
                 stopNameInput.value = '';
-                const now = new Date();
-                stopDateInput.value = now.toISOString().slice(0, 10);
-                stopTimeInput.value = now.toTimeString().slice(0, 5);
                 stopModal.classList.remove('hidden');
             }
             
@@ -386,36 +430,27 @@
 
             saveStopBtn.addEventListener('click', () => {
                 const stopName = stopNameInput.value.trim();
-                const stopDate = stopDateInput.value;
-                const stopTime = stopTimeInput.value;
                 const pointType = pointTypeSelect.value;
                 const selectedRecorrido = recorridoSelect.value;
-                const points = recorridos[selectedRecorrido];
-                // Se crea un string de fecha local, que `new Date()` interpreta correctamente en la zona horaria del navegador.
-                let dateTime = (stopDate && stopTime) ? `${stopDate}T${stopTime}` : null;
+                const points = recorridos[selectedRecorrido].path[currentBandera];
 
                 if (editingStopIndex !== null) {
                     const pointToEdit = points[editingStopIndex];
                     pointToEdit.name = stopName;
-                    pointToEdit.dateTime = dateTime;
                     pointToEdit.type = pointType;
                 } else {
-                    let newPoint;
+                    const newPoint = { name: stopName, type: pointType, lat: tempStopCoords.lat, lng: tempStopCoords.lng };
                     if (points.length < 2) {
-                        if (!dateTime) { alert("La fecha y hora son obligatorias."); return; }
-                        newPoint = { name: stopName, dateTime: dateTime, type: 'stop', lat: tempStopCoords.lat, lng: tempStopCoords.lng };
                         points.push(newPoint);
                     } else {
-                        if (autoCalcCheckbox.checked) dateTime = null;
-                        else if (!dateTime) { alert("La fecha y hora son obligatorias si el cálculo automático está desactivado."); return; }
-                        newPoint = { name: stopName, dateTime: dateTime, type: pointType, lat: tempStopCoords.lat, lng: tempStopCoords.lng };
                         points.splice(points.length - 1, 0, newPoint);
                     }
                 }
                 
-                if (autoCalcCheckbox.checked) {
-                    calculateIntermediateTimes(selectedRecorrido);
-                }
+                // The concept of auto-calculating times is now deferred to timetable generation
+                // if (autoCalcCheckbox.checked) {
+                //     calculateIntermediateTimes(selectedRecorrido);
+                // }
 
                 saveRecorridosToStorage();
                 updateUIForSelectedRecorrido();
@@ -438,33 +473,15 @@
 
                 if (button.classList.contains('edit-stop-btn')) {
                     editingStopIndex = stopIndex;
-                    const point = recorridos[recorridoName][stopIndex];
+                    const point = recorridos[recorridoName].path[currentBandera][stopIndex];
                     modalTitle.textContent = "Editar Punto";
                     stopNameInput.value = point.name || '';
-                    
-                    if (point.dateTime) {
-                        const date = new Date(point.dateTime);
-                        // CORRECCIÓN: Obtener componentes de fecha/hora en la zona horaria local del navegador
-                        // para asegurar que lo que el usuario ve y edita en el modal es correcto y consistente.
-                        const year = date.getFullYear();
-                        const month = String(date.getMonth() + 1).padStart(2, '0');
-                        const day = String(date.getDate()).padStart(2, '0');
-                        const hours = String(date.getHours()).padStart(2, '0');
-                        const minutes = String(date.getMinutes()).padStart(2, '0');
-                        
-                        stopDateInput.value = `${year}-${month}-${day}`;
-                        stopTimeInput.value = `${hours}:${minutes}`;
-                    } else {
-                        // Si no hay fecha, limpiar los campos
-                        stopDateInput.value = '';
-                        stopTimeInput.value = '';
-                    }
-
                     pointTypeSelect.value = point.type || 'stop';
                     
-                    const isAuto = autoCalcCheckbox.checked;
-                    const isFirstOrLast = stopIndex === 0 || stopIndex === (recorridos[recorridoName].length - 1);
-                    datetimeInputContainer.style.display = (!isAuto || isFirstOrLast) ? 'block' : 'none';
+                    const points = recorridos[recorridoName].path[currentBandera];
+                    const isFirstOrLast = stopIndex === 0 || stopIndex === (points.length - 1);
+
+                    datetimeInputContainer.style.display = 'none'; // Always hide
                     pointTypeContainer.style.display = (isFirstOrLast) ? 'none' : 'block';
                     toggleNameForWaypoint();
                     stopModal.classList.remove('hidden');
@@ -472,8 +489,9 @@
                 
                 if (button.classList.contains('delete-stop-btn')) {
                     if (confirm("¿Estás seguro de que quieres eliminar este punto?")) {
-                        recorridos[recorridoName].splice(stopIndex, 1);
-                        if (autoCalcCheckbox.checked) calculateIntermediateTimes(recorridoName);
+                        recorridos[recorridoName].path[currentBandera].splice(stopIndex, 1);
+                        // auto-calc times is deferred
+                        // if (autoCalcCheckbox.checked) calculateIntermediateTimes(recorridoName);
                         saveRecorridosToStorage();
                         updateUIForSelectedRecorrido();
                     }
@@ -547,12 +565,22 @@
 
             // --- LÓGICA DE SEGUIMIENTO EN TIEMPO REAL ---
             startBtn.addEventListener('click', () => {
-                const selectedRecorrido = recorridoSelect.value;
-                if (!selectedRecorrido || recorridos[selectedRecorrido].length < 2) {
-                    alert("Selecciona un recorrido con al menos 2 puntos para iniciar.");
+                const selectedRecorridoName = recorridoSelect.value;
+                const recorrido = recorridos[selectedRecorridoName];
+                if (!selectedRecorridoName || !recorrido || !recorrido.path) {
+                    alert("Selecciona un recorrido válido.");
                     return;
                 }
-                currentRecorrido = { name: selectedRecorrido, stops: recorridos[selectedRecorrido], lastVisitedStopIndex: -1, currentTargetIndex: 0, trace: [] };
+
+                const stops = recorrido.path[currentBandera];
+                if (stops.length < 2) {
+                    alert("La bandera seleccionada debe tener al menos 2 puntos para iniciar.");
+                    return;
+                }
+
+                // For now, tracking will just use the selected bandera path.
+                // The full timetable/lap selection will be implemented later.
+                currentRecorrido = { name: selectedRecorridoName, stops: stops, lastVisitedStopIndex: -1, currentTargetIndex: 0, trace: [] };
                 startBtn.disabled = true; stopBtn.disabled = false; recorridoSelect.disabled = true; createRecorridoBtn.disabled = true; deleteRecorridoBtn.disabled = true; radiusInput.disabled = true; autoCalcCheckbox.disabled = true;
                 
                 etaContainer.classList.remove('hidden');
@@ -746,7 +774,10 @@
 
             function drawRecorridoOnMap(recorridoName) {
                 clearMapLayers();
-                const stops = recorridos[recorridoName];
+                const recorrido = recorridos[recorridoName];
+                if (!recorrido || !recorrido.path) return;
+
+                const stops = recorrido.path[currentBandera];
                 if (!stops || stops.length < 1) return;
                 const latLngs = stops.map(stop => [stop.lat, stop.lng]);
                 recorridoPolyline = L.polyline(latLngs, { color: 'blue' }).addTo(map);
