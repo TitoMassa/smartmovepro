@@ -120,6 +120,33 @@
                         <h3 class="text-lg font-bold mb-2 text-gray-700">Puntos del Recorrido</h3>
                         <ul id="stops-list" class="space-y-2 bg-gray-50 p-3 rounded-md h-48 overflow-y-auto"></ul>
                     </div>
+
+                    <!-- Timetable Management UI -->
+                    <div id="timetable-management-container" class="mt-6 pt-4 border-t">
+                        <h3 class="text-lg font-bold mb-2 text-gray-700">Gestión de Horarios</h3>
+                        <div class="space-y-3">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label for="duration-ida-input" class="block text-sm font-medium text-gray-700">Duración Ida (min)</label>
+                                    <input type="number" id="duration-ida-input" value="30" min="1" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="duration-vuelta-input" class="block text-sm font-medium text-gray-700">Duración Vuelta (min)</label>
+                                    <input type="number" id="duration-vuelta-input" value="30" min="1" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                            </div>
+                            <div>
+                                <label for="start-time-input" class="block text-sm font-medium text-gray-700">Hora de Inicio (primer viaje)</label>
+                                <input type="time" id="start-time-input" value="08:00" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="lap-count-input" class="block text-sm font-medium text-gray-700">Cantidad de Vueltas</label>
+                                <input type="number" id="lap-count-input" value="5" min="1" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <button id="generate-timetable-btn" class="w-full btn btn-primary">Generar Horarios</button>
+                        </div>
+                        <div id="timetable-display" class="mt-4 space-y-1"></div>
+                    </div>
                 </div>
             </div>
 
@@ -215,6 +242,14 @@
             const creationGuideContainer = document.getElementById('creation-guide-container');
             const etaContainer = document.getElementById('eta-container');
             const etaTableBody = document.getElementById('eta-table-body');
+
+            // Timetable UI elements
+            const durationIdaInput = document.getElementById('duration-ida-input');
+            const durationVueltaInput = document.getElementById('duration-vuelta-input');
+            const startTimeInput = document.getElementById('start-time-input');
+            const lapCountInput = document.getElementById('lap-count-input');
+            const generateTimetableBtn = document.getElementById('generate-timetable-btn');
+            const timetableDisplay = document.getElementById('timetable-display');
             
             // Modal
             const stopModal = document.getElementById('stop-modal');
@@ -247,18 +282,29 @@
                 const storedRecorridos = localStorage.getItem('busRecorridos');
                 if (storedRecorridos) {
                     let loadedRecorridos = JSON.parse(storedRecorridos);
-                    // Migrate old data structure if necessary
+
                     for (const name in loadedRecorridos) {
+                        // Migrate from the oldest array format
                         if (Array.isArray(loadedRecorridos[name])) {
-                            console.log(`Migrating old route format for: ${name}`);
+                            console.log(`Migrating legacy array format for: ${name}`);
                             const oldPath = loadedRecorridos[name];
                             loadedRecorridos[name] = {
                                 path: { ida: oldPath, vuelta: [] }
                             };
                         }
+
+                        // Ensure the config and timetables properties exist for all valid routes
+                        if (loadedRecorridos[name] && loadedRecorridos[name].path) {
+                            if (!loadedRecorridos[name].config) {
+                                loadedRecorridos[name].config = { durationIda: 30, durationVuelta: 30 };
+                            }
+                            if (!loadedRecorridos[name].timetables) {
+                                loadedRecorridos[name].timetables = { 'Default': [] };
+                            }
+                        }
                     }
                     recorridos = loadedRecorridos;
-                    saveRecorridosToStorage(); // Save back the migrated data
+                    saveRecorridosToStorage(); // Save back any migrated data
                 }
                 updateRecorridoSelector();
             }
@@ -289,6 +335,7 @@
                 updateCreationGuide(selectedRecorrido);
                 updateStopsList(selectedRecorrido);
                 drawRecorridoOnMap(selectedRecorrido);
+                updateTimetableDisplay();
             }
             
             function formatDateTime(isoString) {
@@ -354,7 +401,11 @@
             createRecorridoBtn.addEventListener('click', () => {
                 const recorridoName = newRecorridoNameInput.value.trim();
                 if (recorridoName && !recorridos[recorridoName]) {
-                    recorridos[recorridoName] = { path: { ida: [], vuelta: [] } };
+                    recorridos[recorridoName] = {
+                        path: { ida: [], vuelta: [] },
+                        config: { durationIda: 30, durationVuelta: 30 },
+                        timetables: { 'Default': [] }
+                    };
                     saveRecorridosToStorage();
                     newRecorridoNameInput.value = '';
                     updateRecorridoSelector();
@@ -795,6 +846,105 @@
                 });
                 if(stops.length > 0) map.fitBounds(recorridoPolyline.getBounds());
             }
+
+            function generateTimetable() {
+                const selectedRecorridoName = recorridoSelect.value;
+                if (!selectedRecorridoName) {
+                    alert("Por favor, selecciona un recorrido primero.");
+                    return;
+                }
+
+                const durationIda = parseInt(durationIdaInput.value);
+                const durationVuelta = parseInt(durationVueltaInput.value);
+                const startTime = startTimeInput.value;
+                const lapCount = parseInt(lapCountInput.value);
+
+                if (isNaN(durationIda) || isNaN(durationVuelta) || isNaN(lapCount) || !startTime) {
+                    alert("Por favor, completa todos los campos de horarios.");
+                    return;
+                }
+
+                const recorrido = recorridos[selectedRecorridoName];
+                recorrido.config = { durationIda, durationVuelta };
+
+                const newTimetable = [];
+                const [startHour, startMinute] = startTime.split(':').map(Number);
+
+                let currentHour = startHour;
+                let currentMinute = startMinute;
+
+                for (let i = 1; i <= lapCount; i++) {
+                    // Ida
+                    newTimetable.push({
+                        lap: i,
+                        bandera: 'ida',
+                        startTime: `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
+                    });
+
+                    // Add durationIda to get start time of vuelta
+                    currentMinute += durationIda;
+                    currentHour += Math.floor(currentMinute / 60);
+                    currentMinute %= 60;
+                    currentHour %= 24;
+
+                    // Vuelta
+                    newTimetable.push({
+                        lap: i,
+                        bandera: 'vuelta',
+                        startTime: `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
+                    });
+
+                    // Add durationVuelta to get start time of next ida
+                    currentMinute += durationVuelta;
+                    currentHour += Math.floor(currentMinute / 60);
+                    currentMinute %= 60;
+                    currentHour %= 24;
+                }
+
+                recorrido.timetables['Default'] = newTimetable;
+                saveRecorridosToStorage();
+                updateTimetableDisplay(); // This function will be created in the next step
+            }
+
+            function updateTimetableDisplay() {
+                const selectedRecorridoName = recorridoSelect.value;
+                timetableDisplay.innerHTML = ''; // Clear previous display
+
+                if (!selectedRecorridoName) {
+                    return;
+                }
+
+                const recorrido = recorridos[selectedRecorridoName];
+
+                if (!recorrido || !recorrido.config || !recorrido.timetables) {
+                    return;
+                }
+
+                durationIdaInput.value = recorrido.config.durationIda;
+                durationVueltaInput.value = recorrido.config.durationVuelta;
+
+                const timetable = recorrido.timetables['Default'] || [];
+
+                if (timetable.length === 0) {
+                    timetableDisplay.innerHTML = '<p class="text-gray-500 text-sm">No hay horarios generados.</p>';
+                    return;
+                }
+
+                const list = document.createElement('ul');
+                list.className = 'space-y-2 bg-gray-50 p-3 rounded-md h-32 overflow-y-auto';
+
+                timetable.forEach(leg => {
+                    const li = document.createElement('li');
+                    li.className = 'text-sm text-gray-800';
+                    const banderaText = leg.bandera === 'ida' ? 'Ida' : 'Vuelta';
+                    li.textContent = `Vuelta ${leg.lap} (${banderaText}): ${leg.startTime}`;
+                    list.appendChild(li);
+                });
+
+                timetableDisplay.appendChild(list);
+            }
+
+            generateTimetableBtn.addEventListener('click', generateTimetable);
 
             // --- INICIO DE LA APLICACIÓN ---
             initializeMap();
