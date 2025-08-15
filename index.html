@@ -878,7 +878,8 @@
                     newTimetable.push({
                         lap: i,
                         bandera: 'ida',
-                        startTime: `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
+                        startTime: `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`,
+                        duration: durationIda
                     });
 
                     // Add durationIda to get start time of vuelta
@@ -891,7 +892,8 @@
                     newTimetable.push({
                         lap: i,
                         bandera: 'vuelta',
-                        startTime: `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`
+                        startTime: `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`,
+                        duration: durationVuelta
                     });
 
                     // Add durationVuelta to get start time of next ida
@@ -937,7 +939,7 @@
                     const li = document.createElement('li');
                     li.className = 'text-sm text-gray-800';
                     const banderaText = leg.bandera === 'ida' ? 'Ida' : 'Vuelta';
-                    li.textContent = `Vuelta ${leg.lap} (${banderaText}): ${leg.startTime}`;
+                    li.textContent = `Vuelta ${leg.lap} (${banderaText}): ${leg.startTime} (${leg.duration} min)`;
                     list.appendChild(li);
                 });
 
