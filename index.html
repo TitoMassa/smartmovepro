@@ -702,13 +702,10 @@
                         const hasStarted = currentRecorrido.lastVisitedStopIndex >= 0;
 
                         if (isEarly && !hasStarted) {
-                            // Special case: Early and waiting at the start ("haciendo hora").
-                            // Per user instruction, ADD the earliness to the ETA.
-                            // Since deviation is negative, we subtract it to add its magnitude.
-                            finalEtaSeconds = etaBaseSeconds - lastDeviationSeconds;
+                            // Case: Early and not started ("haciendo hora"). Ignore deviation.
+                            finalEtaSeconds = etaBaseSeconds;
                         } else {
-                            // Standard calculation for all other cases (late, or early and in-route).
-                            // Add lateness (positive deviation), subtract earliness (negative deviation).
+                            // All other cases: Late (anytime) or Early-and-Started. Apply deviation.
                             finalEtaSeconds = etaBaseSeconds + lastDeviationSeconds;
                         }
 
