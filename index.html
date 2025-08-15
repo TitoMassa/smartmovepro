@@ -135,6 +135,16 @@
                                     <input type="number" id="duration-vuelta-input" value="30" min="1" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
                                 </div>
                             </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label for="pause-ida-input" class="block text-sm font-medium text-gray-700">Pausa post-ida (min)</label>
+                                    <input type="number" id="pause-ida-input" value="5" min="0" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="pause-vuelta-input" class="block text-sm font-medium text-gray-700">Pausa post-vuelta (min)</label>
+                                    <input type="number" id="pause-vuelta-input" value="15" min="0" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                            </div>
                             <div>
                                 <label for="start-time-input" class="block text-sm font-medium text-gray-700">Hora de Inicio (primer viaje)</label>
                                 <input type="time" id="start-time-input" value="08:00" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
@@ -195,7 +205,7 @@
                     <div id="point-name-container">
                         <input type="text" id="stop-name" placeholder="Nombre (opcional)" class="w-full p-2 border border-gray-300 rounded-md">
                     </div>
-                    <div id="datetime-input-container">
+                    <div id="datetime-input-container" style="display: none;">
                         <label class="text-sm text-gray-600">Fecha y Hora Programada:</label>
                         <div class="flex space-x-2">
                             <input type="date" id="stop-date" class="w-1/2 p-2 border border-gray-300 rounded-md">
@@ -206,6 +216,21 @@
                 <div class="items-center px-4 py-3">
                     <button id="save-stop-btn" class="w-full btn btn-success">Guardar</button>
                     <button id="cancel-stop-btn" class="mt-2 w-full btn bg-gray-500 hover:bg-gray-600 text-white">Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para seleccionar viaje -->
+    <div id="trip-select-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg leading-6 font-medium text-gray-900 text-center">Seleccionar Viaje a Iniciar</h3>
+                <div id="trip-list" class="mt-4 max-h-80 overflow-y-auto">
+                    <!-- Los viajes se insertarán aquí dinámicamente -->
+                </div>
+                <div class="items-center px-4 py-3">
+                    <button id="cancel-trip-select-btn" class="mt-2 w-full btn bg-gray-500 hover:bg-gray-600 text-white">Cancelar</button>
                 </div>
             </div>
         </div>
@@ -246,6 +271,8 @@
             // Timetable UI elements
             const durationIdaInput = document.getElementById('duration-ida-input');
             const durationVueltaInput = document.getElementById('duration-vuelta-input');
+            const pauseIdaInput = document.getElementById('pause-ida-input');
+            const pauseVueltaInput = document.getElementById('pause-vuelta-input');
             const startTimeInput = document.getElementById('start-time-input');
             const lapCountInput = document.getElementById('lap-count-input');
             const generateTimetableBtn = document.getElementById('generate-timetable-btn');
@@ -263,6 +290,11 @@
             const datetimeInputContainer = document.getElementById('datetime-input-container');
             const stopDateInput = document.getElementById('stop-date');
             const stopTimeInput = document.getElementById('stop-time');
+
+            // Trip Select Modal
+            const tripSelectModal = document.getElementById('trip-select-modal');
+            const tripList = document.getElementById('trip-list');
+            const cancelTripSelectBtn = document.getElementById('cancel-trip-select-btn');
 
             // --- INICIALIZACIÓN ---
             function initializeMap() {
@@ -296,7 +328,14 @@
                         // Ensure the config and timetables properties exist for all valid routes
                         if (loadedRecorridos[name] && loadedRecorridos[name].path) {
                             if (!loadedRecorridos[name].config) {
-                                loadedRecorridos[name].config = { durationIda: 30, durationVuelta: 30 };
+                                loadedRecorridos[name].config = { durationIda: 30, durationVuelta: 30, pauseAfterIda: 5, pauseAfterVuelta: 15 };
+                            } else { // Check for pause properties if config exists
+                                if (loadedRecorridos[name].config.pauseAfterIda === undefined) {
+                                    loadedRecorridos[name].config.pauseAfterIda = 5;
+                                }
+                                if (loadedRecorridos[name].config.pauseAfterVuelta === undefined) {
+                                    loadedRecorridos[name].config.pauseAfterVuelta = 15;
+                                }
                             }
                             if (!loadedRecorridos[name].timetables) {
                                 loadedRecorridos[name].timetables = { 'Default': [] };
@@ -403,7 +442,7 @@
                 if (recorridoName && !recorridos[recorridoName]) {
                     recorridos[recorridoName] = {
                         path: { ida: [], vuelta: [] },
-                        config: { durationIda: 30, durationVuelta: 30 },
+                        config: { durationIda: 30, durationVuelta: 30, pauseAfterIda: 5, pauseAfterVuelta: 15 },
                         timetables: { 'Default': [] }
                     };
                     saveRecorridosToStorage();
@@ -549,68 +588,44 @@
                 }
             });
 
-            // CORREGIDO Y REESCRITO: Lógica de cálculo de horarios intermedios
-            function calculateIntermediateTimes(recorridoName) {
-                const points = recorridos[recorridoName];
-                if (!points || points.length < 2) return;
+            function generateScheduledPath(path, startTimeStr, durationMinutes) {
+                if (!path || path.length < 2) return [];
 
-                const firstPoint = points[0];
-                const lastPoint = points[points.length - 1];
+                const scheduledPath = JSON.parse(JSON.stringify(path)); // Deep copy
+                const totalDurationMs = durationMinutes * 60 * 1000;
 
-                if (!firstPoint.dateTime || !lastPoint.dateTime) {
-                    console.error("No se pueden calcular los tiempos intermedios sin una hora de inicio y fin.");
-                    return;
-                }
+                const [startHour, startMinute] = startTimeStr.split(':').map(Number);
+                const today = new Date();
+                const startTime = new Date(today.getFullYear(), today.getMonth(), today.getDate(), startHour, startMinute).getTime();
 
-                const startTime = new Date(firstPoint.dateTime).getTime();
-                const endTime = new Date(lastPoint.dateTime).getTime();
-                const totalDurationMs = endTime - startTime;
-
-                if (totalDurationMs <= 0) {
-                    console.warn("La duración total es cero o negativa. No se pueden interpolar los tiempos.");
-                    // Limpiar los tiempos intermedios si la duración es inválida.
-                    for (let i = 1; i < points.length - 1; i++) {
-                        points[i].dateTime = null;
-                    }
-                    saveRecorridosToStorage();
-                    return;
-                }
-
-                // 1. Calcular la distancia total del recorrido siguiendo todos los puntos.
-                const segmentDistances = points.map((point, i) => {
-                    if (i === points.length - 1) return 0; // El último punto no tiene segmento siguiente.
+                // 1. Calcular la distancia total del recorrido.
+                const segmentDistances = scheduledPath.map((point, i) => {
+                    if (i === scheduledPath.length - 1) return 0;
                     const from = L.latLng(point.lat, point.lng);
-                    const to = L.latLng(points[i+1].lat, points[i+1].lng);
+                    const to = L.latLng(scheduledPath[i+1].lat, scheduledPath[i+1].lng);
                     return from.distanceTo(to);
                 });
                 const totalDistance = segmentDistances.reduce((sum, dist) => sum + dist, 0);
 
+                scheduledPath[0].dateTime = new Date(startTime).toISOString();
+
                 if (totalDistance === 0) {
-                    console.warn("La distancia total es cero. Distribuyendo el tiempo de manera uniforme.");
-                    const timeSlice = totalDurationMs / (points.length - 1);
-                     for (let i = 1; i < points.length - 1; i++) {
-                        const pointTimeMs = startTime + (timeSlice * i);
-                        points[i].dateTime = new Date(pointTimeMs).toISOString();
-                    }
-                    saveRecorridosToStorage();
-                    return;
+                    console.warn("La distancia total es cero. No se pueden interpolar tiempos.");
+                    const endTime = startTime + totalDurationMs;
+                    scheduledPath[scheduledPath.length - 1].dateTime = new Date(endTime).toISOString();
+                    return scheduledPath;
                 }
 
-                // 2. Calcular el tiempo para cada punto intermedio basado en su progreso a lo largo de la distancia total.
+                // 2. Calcular el tiempo para cada punto intermedio.
                 let cumulativeDistance = 0;
-                for (let i = 1; i < points.length - 1; i++) {
+                for (let i = 1; i < scheduledPath.length; i++) {
                     cumulativeDistance += segmentDistances[i-1];
-                    
                     const progress = cumulativeDistance / totalDistance;
                     const pointTimeMs = startTime + (totalDurationMs * progress);
-                    
-                    // CORRECCIÓN CLAVE: Usar toISOString() completo para preservar la información de zona horaria (UTC).
-                    // Al mantener la 'Z' al final, se asegura que la fecha se interprete consistentemente
-                    // como UTC en todas partes, y las funciones como .getHours() la convertirán correctamente a la hora local para visualización.
-                    points[i].dateTime = new Date(pointTimeMs).toISOString();
+                    scheduledPath[i].dateTime = new Date(pointTimeMs).toISOString();
                 }
 
-                saveRecorridosToStorage();
+                return scheduledPath;
             }
 
 
@@ -618,31 +633,67 @@
             startBtn.addEventListener('click', () => {
                 const selectedRecorridoName = recorridoSelect.value;
                 const recorrido = recorridos[selectedRecorridoName];
-                if (!selectedRecorridoName || !recorrido || !recorrido.path) {
-                    alert("Selecciona un recorrido válido.");
+                if (!selectedRecorridoName || !recorrido || !recorrido.timetables) {
+                    alert("Por favor, selecciona un recorrido y genera horarios primero.");
                     return;
                 }
 
-                const stops = recorrido.path[currentBandera];
-                if (stops.length < 2) {
-                    alert("La bandera seleccionada debe tener al menos 2 puntos para iniciar.");
+                const timetable = recorrido.timetables['Default'] || [];
+                if (timetable.length === 0) {
+                    alert("No hay horarios generados para este recorrido.");
                     return;
                 }
 
-                // For now, tracking will just use the selected bandera path.
-                // The full timetable/lap selection will be implemented later.
-                currentRecorrido = { name: selectedRecorridoName, stops: stops, lastVisitedStopIndex: -1, currentTargetIndex: 0, trace: [] };
-                startBtn.disabled = true; stopBtn.disabled = false; recorridoSelect.disabled = true; createRecorridoBtn.disabled = true; deleteRecorridoBtn.disabled = true; radiusInput.disabled = true; autoCalcCheckbox.disabled = true;
-                
-                etaContainer.classList.remove('hidden');
+                tripList.innerHTML = ''; // Clear previous list
+                timetable.forEach(leg => {
+                    const button = document.createElement('button');
+                    button.className = 'w-full text-left p-3 bg-gray-100 hover:bg-gray-200 rounded-md';
+                    const banderaText = leg.bandera === 'ida' ? 'Ida' : 'Vuelta';
+                    button.textContent = `Vuelta ${leg.lap} (${banderaText}) - Inicio: ${leg.startTime}`;
 
-                if (navigator.geolocation) {
-                    gpsInterval = navigator.geolocation.watchPosition(updateDriverPosition, handleLocationError, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
-                } else {
-                    alert("Geolocalización no es soportada.");
-                    stopTracking();
-                }
-                timeUpdateInterval = setInterval(updateTimeDisplay, 1000);
+                    button.onclick = () => {
+                        const path = recorrido.path[leg.bandera];
+                        if (!path || path.length < 2) {
+                            alert(`La bandera "${banderaText}" no tiene suficientes puntos definidos.`);
+                            return;
+                        }
+                        const scheduledStops = generateScheduledPath(path, leg.startTime, leg.duration);
+
+                        currentRecorrido = {
+                            name: selectedRecorridoName,
+                            stops: scheduledStops,
+                            lastVisitedStopIndex: -1,
+                            currentTargetIndex: 0,
+                            trace: []
+                        };
+
+                        startBtn.disabled = true;
+                        stopBtn.disabled = false;
+                        recorridoSelect.disabled = true;
+                        createRecorridoBtn.disabled = true;
+                        deleteRecorridoBtn.disabled = true;
+                        radiusInput.disabled = true;
+                        autoCalcCheckbox.disabled = true;
+
+                        etaContainer.classList.remove('hidden');
+                        if (navigator.geolocation) {
+                            gpsInterval = navigator.geolocation.watchPosition(updateDriverPosition, handleLocationError, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 });
+                        } else {
+                            alert("Geolocalización no es soportada.");
+                            stopTracking();
+                        }
+                        timeUpdateInterval = setInterval(updateTimeDisplay, 1000);
+
+                        tripSelectModal.classList.add('hidden');
+                    };
+                    tripList.appendChild(button);
+                });
+
+                tripSelectModal.classList.remove('hidden');
+            });
+
+            cancelTripSelectBtn.addEventListener('click', () => {
+                tripSelectModal.classList.add('hidden');
             });
             
             stopBtn.addEventListener('click', stopTracking);
@@ -856,16 +907,18 @@
 
                 const durationIda = parseInt(durationIdaInput.value);
                 const durationVuelta = parseInt(durationVueltaInput.value);
+                const pauseIda = parseInt(pauseIdaInput.value);
+                const pauseVuelta = parseInt(pauseVueltaInput.value);
                 const startTime = startTimeInput.value;
                 const lapCount = parseInt(lapCountInput.value);
 
-                if (isNaN(durationIda) || isNaN(durationVuelta) || isNaN(lapCount) || !startTime) {
+                if (isNaN(durationIda) || isNaN(durationVuelta) || isNaN(pauseIda) || isNaN(pauseVuelta) || isNaN(lapCount) || !startTime) {
                     alert("Por favor, completa todos los campos de horarios.");
                     return;
                 }
 
                 const recorrido = recorridos[selectedRecorridoName];
-                recorrido.config = { durationIda, durationVuelta };
+                recorrido.config = { durationIda, durationVuelta, pauseAfterIda: pauseIda, pauseAfterVuelta: pauseVuelta };
 
                 const newTimetable = [];
                 const [startHour, startMinute] = startTime.split(':').map(Number);
@@ -882,8 +935,8 @@
                         duration: durationIda
                     });
 
-                    // Add durationIda to get start time of vuelta
-                    currentMinute += durationIda;
+                    // Add durationIda and pauseAfterIda to get start time of vuelta
+                    currentMinute += durationIda + pauseIda;
                     currentHour += Math.floor(currentMinute / 60);
                     currentMinute %= 60;
                     currentHour %= 24;
@@ -896,8 +949,8 @@
                         duration: durationVuelta
                     });
 
-                    // Add durationVuelta to get start time of next ida
-                    currentMinute += durationVuelta;
+                    // Add durationVuelta and pauseAfterVuelta to get start time of next ida
+                    currentMinute += durationVuelta + pauseVuelta;
                     currentHour += Math.floor(currentMinute / 60);
                     currentMinute %= 60;
                     currentHour %= 24;
@@ -905,7 +958,7 @@
 
                 recorrido.timetables['Default'] = newTimetable;
                 saveRecorridosToStorage();
-                updateTimetableDisplay(); // This function will be created in the next step
+                updateTimetableDisplay();
             }
 
             function updateTimetableDisplay() {
@@ -924,6 +977,8 @@
 
                 durationIdaInput.value = recorrido.config.durationIda;
                 durationVueltaInput.value = recorrido.config.durationVuelta;
+                pauseIdaInput.value = recorrido.config.pauseAfterIda;
+                pauseVueltaInput.value = recorrido.config.pauseAfterVuelta;
 
                 const timetable = recorrido.timetables['Default'] || [];
 
