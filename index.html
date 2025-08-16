@@ -11,13 +11,37 @@
 
     <style>
         :root {
-            --primary-color: #4f46e5; /* indigo-600 */
-            --primary-hover: #4338ca; /* indigo-700 */
-            --danger-color: #dc2626; /* red-600 */
-            --danger-hover: #b91c1c; /* red-700 */
-            --success-color: #16a34a; /* green-600 */
-            --success-hover: #15803d; /* green-700 */
+            --primary-color: #6366f1; /* indigo-500 */
+            --primary-hover: #4f46e5; /* indigo-600 */
+            --danger-color: #ef4444; /* red-500 */
+            --danger-hover: #dc2626; /* red-600 */
+            --success-color: #22c55e; /* green-500 */
+            --success-hover: #16a34a; /* green-600 */
+
+            --background-color: #000000;
+            --component-background: #111827; /* gray-900 */
+            --component-border: #374151; /* gray-700 */
+            --text-primary: #f9fafb; /* gray-50 */
+            --text-secondary: #d1d5db; /* gray-300 */
+            --text-tertiary: #9ca3af; /* gray-400 */
         }
+
+        /* Apply dark theme styles to inputs */
+        input[type="text"], input[type="number"], input[type="time"], select {
+            background-color: var(--component-background);
+            color: var(--text-primary);
+            border: 1px solid var(--component-border);
+        }
+        input[type="text"]:focus, input[type="number"]:focus, input[type="time"]:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px var(--primary-hover);
+        }
+        input[type="checkbox"] {
+            background-color: var(--component-background);
+            border-color: var(--component-border);
+        }
+
         #map { height: 400px; width: 100%; cursor: crosshair; border-radius: 0.5rem; }
         .status-indicator {
             font-size: 3rem; font-weight: 800; text-align: center;
@@ -27,22 +51,28 @@
         }
         .status-ontime { background-color: var(--success-color); }
         .status-late { background-color: var(--danger-color); }
-        .status-early { background-color: #2563eb; } /* blue-600 */
+        .status-early { background-color: #3b82f6; } /* blue-500 */
         .status-inactive { background-color: #4b5563; } /* gray-600 */
+
         .stop-item-btn {
             background: none; border: none; cursor: pointer;
             margin-left: 8px; vertical-align: middle;
             transition: color 0.2s;
         }
+
         .creation-guide {
-            background-color: #eef2ff; color: var(--primary-color); border-left: 4px solid var(--primary-color);
+            background-color: rgba(79, 70, 229, 0.1); /* indigo-600 with opacity */
+            color: var(--primary-color);
+            border-left: 4px solid var(--primary-color);
             padding: 12px; margin-bottom: 1rem; border-radius: 4px;
             font-weight: 500;
         }
+
         .btn {
             padding: 0.75rem 1rem; border-radius: 0.375rem; font-weight: 600;
             transition: background-color 0.2s, transform 0.1s;
             display: flex; align-items: center; justify-content: center;
+            border: 1px solid transparent;
         }
         .btn:active { transform: scale(0.98); }
         .btn-primary { background-color: var(--primary-color); color: white; }
@@ -51,30 +81,38 @@
         .btn-danger:hover { background-color: var(--danger-hover); }
         .btn-success { background-color: var(--success-color); color: white; }
         .btn-success:hover { background-color: var(--success-hover); }
+
+        /* Specific overrides for dark mode */
+        hr {
+            border-color: var(--component-border);
+        }
+        #stops-list, #timetable-display .overflow-y-auto {
+            background-color: #1f2937; /* gray-800 */
+        }
     </style>
 </head>
-<body class="bg-gray-100 font-sans">
+<body class="bg-black font-sans text-gray-200">
 
     <div class="container mx-auto p-4 max-w-7xl">
 
-        <header class="bg-white shadow-lg rounded-xl p-6 mb-6 flex justify-between items-center">
+        <header class="bg-gray-900 border border-gray-700 shadow-lg rounded-xl p-6 mb-6 flex justify-between items-center">
             <div>
-                <h1 class="text-4xl font-extrabold text-gray-800">Smart Move Pro</h1>
-                <p class="text-gray-500 text-lg">Tu asistente de recorrido inteligente</p>
+                <h1 class="text-4xl font-extrabold text-gray-50">Smart Move Pro</h1>
+                <p class="text-gray-400 text-lg">Tu asistente de recorrido inteligente</p>
             </div>
         </header>
 
         <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
             <!-- Columna de Gestión de Recorrido -->
-            <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-2xl font-bold mb-4 border-b pb-3 text-gray-700">Gestión de Recorrido</h2>
+            <div class="lg:col-span-1 bg-gray-900 border border-gray-700 p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold mb-4 border-b border-gray-700 pb-3 text-gray-200">Gestión de Recorrido</h2>
                 
                 <div class="space-y-4">
                     <div>
-                        <label for="recorrido-select" class="block text-sm font-medium text-gray-700 mb-1">Seleccionar Recorrido:</label>
+                        <label for="recorrido-select" class="block text-sm font-medium text-gray-300 mb-1">Seleccionar Recorrido:</label>
                         <div class="flex items-center space-x-2">
-                            <select id="recorrido-select" class="w-full p-2 border border-gray-300 rounded-md shadow-sm"></select>
+                            <select id="recorrido-select" class="w-full p-2 rounded-md shadow-sm"></select>
                             <button id="delete-recorrido-btn" title="Eliminar Recorrido" class="p-2.5 btn btn-danger">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
                             </button>
@@ -82,8 +120,8 @@
                     </div>
 
                     <div id="bandera-select-container" class="mt-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Seleccionar Bandera:</label>
-                        <div class="flex items-center space-x-4 bg-gray-100 p-2 rounded-lg">
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Seleccionar Bandera:</label>
+                        <div class="flex items-center space-x-4 bg-gray-800 p-2 rounded-lg">
                             <label class="flex-1 text-center p-2 rounded-md cursor-pointer transition-colors has-[:checked]:bg-indigo-600 has-[:checked]:text-white has-[:checked]:shadow-md">
                                 <input type="radio" name="bandera" value="ida" id="bandera-ida-radio" checked class="sr-only">
                                 <span>Ida</span>
@@ -96,13 +134,13 @@
                     </div>
 
                     <div class="mt-4">
-                        <label for="radius-input" class="block text-sm font-medium text-gray-700 mb-1">Radio de Parada (metros):</label>
-                        <input type="number" id="radius-input" value="20" min="5" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        <label for="radius-input" class="block text-sm font-medium text-gray-300 mb-1">Radio de Parada (metros):</label>
+                        <input type="number" id="radius-input" value="20" min="5" class="w-full p-2 rounded-md shadow-sm">
                     </div>
                     
                     <div class="flex items-center">
-                        <input type="checkbox" id="auto-calc-checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                        <label for="auto-calc-checkbox" class="ml-2 block text-sm text-gray-900">Calcular horarios intermedios</label>
+                        <input type="checkbox" id="auto-calc-checkbox" class="h-4 w-4 text-indigo-600 border-gray-700 rounded focus:ring-indigo-500">
+                        <label for="auto-calc-checkbox" class="ml-2 block text-sm text-gray-200">Calcular horarios intermedios</label>
                     </div>
 
                     <div class="flex space-x-2 pt-2">
@@ -111,47 +149,47 @@
                     </div>
                     <hr class="my-2">
                     <div>
-                        <label for="new-recorrido-name" class="block text-sm font-medium text-gray-700 mb-1">Nombre Nuevo Recorrido:</label>
-                        <input type="text" id="new-recorrido-name" placeholder="Ej: Línea 106 - Ramal A" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        <label for="new-recorrido-name" class="block text-sm font-medium text-gray-300 mb-1">Nombre Nuevo Recorrido:</label>
+                        <input type="text" id="new-recorrido-name" placeholder="Ej: Línea 106 - Ramal A" class="w-full p-2 rounded-md shadow-sm">
                         <button id="create-recorrido-btn" class="mt-2 w-full btn btn-primary">Crear Recorrido</button>
                     </div>
                     <div>
                         <div id="creation-guide-container" class="hidden"></div>
-                        <h3 class="text-lg font-bold mb-2 text-gray-700">Puntos del Recorrido</h3>
-                        <ul id="stops-list" class="space-y-2 bg-gray-50 p-3 rounded-md h-48 overflow-y-auto"></ul>
+                        <h3 class="text-lg font-bold mb-2 text-gray-200">Puntos del Recorrido</h3>
+                        <ul id="stops-list" class="space-y-2 p-3 rounded-md h-48 overflow-y-auto"></ul>
                     </div>
 
                     <!-- Timetable Management UI -->
-                    <div id="timetable-management-container" class="mt-6 pt-4 border-t">
-                        <h3 class="text-lg font-bold mb-2 text-gray-700">Gestión de Horarios</h3>
+                    <div id="timetable-management-container" class="mt-6 pt-4 border-t border-gray-700">
+                        <h3 class="text-lg font-bold mb-2 text-gray-200">Gestión de Horarios</h3>
                         <div class="space-y-3">
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label for="duration-ida-input" class="block text-sm font-medium text-gray-700">Duración Ida (min)</label>
-                                    <input type="number" id="duration-ida-input" value="30" min="1" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                    <label for="duration-ida-input" class="block text-sm font-medium text-gray-300">Duración Ida (min)</label>
+                                    <input type="number" id="duration-ida-input" value="30" min="1" class="w-full p-2 rounded-md shadow-sm">
                                 </div>
                                 <div>
-                                    <label for="duration-vuelta-input" class="block text-sm font-medium text-gray-700">Duración Vuelta (min)</label>
-                                    <input type="number" id="duration-vuelta-input" value="30" min="1" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                    <label for="duration-vuelta-input" class="block text-sm font-medium text-gray-300">Duración Vuelta (min)</label>
+                                    <input type="number" id="duration-vuelta-input" value="30" min="1" class="w-full p-2 rounded-md shadow-sm">
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label for="pause-ida-input" class="block text-sm font-medium text-gray-700">Pausa post-ida (min)</label>
-                                    <input type="number" id="pause-ida-input" value="5" min="0" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                    <label for="pause-ida-input" class="block text-sm font-medium text-gray-300">Pausa post-ida (min)</label>
+                                    <input type="number" id="pause-ida-input" value="5" min="0" class="w-full p-2 rounded-md shadow-sm">
                                 </div>
                                 <div>
-                                    <label for="pause-vuelta-input" class="block text-sm font-medium text-gray-700">Pausa post-vuelta (min)</label>
-                                    <input type="number" id="pause-vuelta-input" value="15" min="0" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                    <label for="pause-vuelta-input" class="block text-sm font-medium text-gray-300">Pausa post-vuelta (min)</label>
+                                    <input type="number" id="pause-vuelta-input" value="15" min="0" class="w-full p-2 rounded-md shadow-sm">
                                 </div>
                             </div>
                             <div>
-                                <label for="start-time-input" class="block text-sm font-medium text-gray-700">Hora de Inicio (primer viaje)</label>
-                                <input type="time" id="start-time-input" value="08:00" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                <label for="start-time-input" class="block text-sm font-medium text-gray-300">Hora de Inicio (primer viaje)</label>
+                                <input type="time" id="start-time-input" value="08:00" class="w-full p-2 rounded-md shadow-sm">
                             </div>
                             <div>
-                                <label for="lap-count-input" class="block text-sm font-medium text-gray-700">Cantidad de Vueltas</label>
-                                <input type="number" id="lap-count-input" value="5" min="1" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                <label for="lap-count-input" class="block text-sm font-medium text-gray-300">Cantidad de Vueltas</label>
+                                <input type="number" id="lap-count-input" value="5" min="1" class="w-full p-2 rounded-md shadow-sm">
                             </div>
                             <button id="generate-timetable-btn" class="w-full btn btn-primary">Generar Horarios</button>
                         </div>
@@ -161,26 +199,26 @@
             </div>
 
             <!-- Columna de Mapa y Estado -->
-            <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-2xl font-bold mb-4 border-b pb-3 text-gray-700">Estado y Mapa</h2>
+            <div class="lg:col-span-2 bg-gray-900 border border-gray-700 p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold mb-4 border-b border-gray-700 pb-3 text-gray-200">Estado y Mapa</h2>
                 <div id="status-indicator" class="status-indicator status-inactive mb-2">--:--</div>
-                <p id="current-stop-info" class="text-center text-green-600 font-bold h-6 mb-1 text-xl hidden"></p>
-                <p id="next-stop-info" class="text-center text-gray-700 font-semibold h-6 mb-4 text-xl"></p>
+                <p id="current-stop-info" class="text-center text-green-400 font-bold h-6 mb-1 text-xl hidden"></p>
+                <p id="next-stop-info" class="text-center text-gray-300 font-semibold h-6 mb-4 text-xl"></p>
                 <div id="map" class="shadow-inner"></div>
                 <p class="text-xs text-gray-500 mt-2 text-center">Haz clic en el mapa para agregar un punto al recorrido activo.</p>
                 
                 <div id="eta-container" class="mt-6 hidden">
-                    <h3 class="text-xl font-bold text-gray-700 mb-3">Tiempos Estimados (Pasajero)</h3>
+                    <h3 class="text-xl font-bold text-gray-200 mb-3">Tiempos Estimados (Pasajero)</h3>
                     <div class="overflow-x-auto">
-                        <table class="min-w-full bg-white border rounded-lg">
-                            <thead class="bg-gray-50">
+                        <table class="min-w-full bg-gray-900 border border-gray-700 rounded-lg">
+                            <thead class="bg-gray-800">
                                 <tr>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Parada</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Programado</th>
-                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ETA</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Parada</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Programado</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">ETA</th>
                                 </tr>
                             </thead>
-                            <tbody id="eta-table-body" class="divide-y divide-gray-200">
+                            <tbody id="eta-table-body" class="divide-y divide-gray-700">
                             </tbody>
                         </table>
                     </div>
@@ -190,47 +228,47 @@
     </div>
 
     <!-- Modal para agregar/editar punto -->
-    <div id="stop-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div id="stop-modal" class="fixed inset-0 bg-black bg-opacity-70 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border border-gray-700 w-96 shadow-lg rounded-md bg-gray-900">
             <div class="mt-3 text-center">
-                <h3 id="modal-title" class="text-lg leading-6 font-medium text-gray-900"></h3>
+                <h3 id="modal-title" class="text-lg leading-6 font-medium text-gray-50"></h3>
                 <div class="mt-2 px-7 py-3 space-y-4">
                     <div id="point-type-container">
-                        <label for="point-type-select" class="block text-sm font-medium text-gray-700 mb-1">Tipo de Punto:</label>
-                        <select id="point-type-select" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        <label for="point-type-select" class="block text-sm font-medium text-gray-300 mb-1">Tipo de Punto:</label>
+                        <select id="point-type-select" class="w-full p-2 rounded-md shadow-sm">
                             <option value="stop">Parada</option>
                             <option value="waypoint">Punto de Paso</option>
                         </select>
                     </div>
                     <div id="point-name-container">
-                        <input type="text" id="stop-name" placeholder="Nombre (opcional)" class="w-full p-2 border border-gray-300 rounded-md">
+                        <input type="text" id="stop-name" placeholder="Nombre (opcional)" class="w-full p-2 rounded-md">
                     </div>
                     <div id="datetime-input-container" style="display: none;">
-                        <label class="text-sm text-gray-600">Fecha y Hora Programada:</label>
+                        <label class="text-sm text-gray-400">Fecha y Hora Programada:</label>
                         <div class="flex space-x-2">
-                            <input type="date" id="stop-date" class="w-1/2 p-2 border border-gray-300 rounded-md">
-                            <input type="time" id="stop-time" class="w-1/2 p-2 border border-gray-300 rounded-md">
+                            <input type="date" id="stop-date" class="w-1/2 p-2 rounded-md">
+                            <input type="time" id="stop-time" class="w-1/2 p-2 rounded-md">
                         </div>
                     </div>
                 </div>
                 <div class="items-center px-4 py-3">
                     <button id="save-stop-btn" class="w-full btn btn-success">Guardar</button>
-                    <button id="cancel-stop-btn" class="mt-2 w-full btn bg-gray-500 hover:bg-gray-600 text-white">Cancelar</button>
+                    <button id="cancel-stop-btn" class="mt-2 w-full btn bg-gray-600 hover:bg-gray-700 text-white">Cancelar</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Modal para seleccionar viaje -->
-    <div id="trip-select-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
-        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div id="trip-select-modal" class="fixed inset-0 bg-black bg-opacity-70 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border border-gray-700 w-96 shadow-lg rounded-md bg-gray-900">
             <div class="mt-3">
-                <h3 class="text-lg leading-6 font-medium text-gray-900 text-center">Seleccionar Viaje a Iniciar</h3>
+                <h3 class="text-lg leading-6 font-medium text-gray-50 text-center">Seleccionar Viaje a Iniciar</h3>
                 <div id="trip-list" class="mt-4 max-h-80 overflow-y-auto">
                     <!-- Los viajes se insertarán aquí dinámicamente -->
                 </div>
                 <div class="items-center px-4 py-3">
-                    <button id="cancel-trip-select-btn" class="mt-2 w-full btn bg-gray-500 hover:bg-gray-600 text-white">Cancelar</button>
+                    <button id="cancel-trip-select-btn" class="mt-2 w-full btn bg-gray-600 hover:bg-gray-700 text-white">Cancelar</button>
                 </div>
             </div>
         </div>
@@ -299,8 +337,8 @@
             // --- INICIALIZACIÓN ---
             function initializeMap() {
                 map = L.map(mapElement).setView([-27.46, -58.83], 13);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                 }).addTo(map);
                 const driverIcon = L.icon({
                     iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
@@ -311,45 +349,75 @@
             }
 
             function loadRecorridosFromStorage() {
-                const storedRecorridos = localStorage.getItem('busRecorridos');
-                if (storedRecorridos) {
-                    let loadedRecorridos = JSON.parse(storedRecorridos);
+                const APP_KEY = 'smartmove_recorridos';
+                const LEGACY_KEY_1 = 'busRecorridos';
+                const LEGACY_KEY_2 = 'recorridos';
 
+                let storedData = localStorage.getItem(APP_KEY);
+                let migrated = false;
+
+                if (!storedData) {
+                    const legacyData1 = localStorage.getItem(LEGACY_KEY_1);
+                    if (legacyData1) {
+                        console.log("Migrating data from legacy key:", LEGACY_KEY_1);
+                        storedData = legacyData1;
+                        localStorage.removeItem(LEGACY_KEY_1);
+                        migrated = true;
+                    } else {
+                        const legacyData2 = localStorage.getItem(LEGACY_KEY_2);
+                        if (legacyData2) {
+                             console.log("Migrating data from legacy key:", LEGACY_KEY_2);
+                             storedData = legacyData2;
+                             localStorage.removeItem(LEGACY_KEY_2);
+                             migrated = true;
+                        }
+                    }
+                }
+
+                if (storedData) {
+                    let loadedRecorridos = JSON.parse(storedData);
+
+                    // Data structure migration logic (remains the same)
                     for (const name in loadedRecorridos) {
-                        // Migrate from the oldest array format
                         if (Array.isArray(loadedRecorridos[name])) {
                             console.log(`Migrating legacy array format for: ${name}`);
                             const oldPath = loadedRecorridos[name];
-                            loadedRecorridos[name] = {
-                                path: { ida: oldPath, vuelta: [] }
-                            };
+                            loadedRecorridos[name] = { path: { ida: oldPath, vuelta: [] } };
+                            migrated = true;
                         }
 
-                        // Ensure the config and timetables properties exist for all valid routes
                         if (loadedRecorridos[name] && loadedRecorridos[name].path) {
                             if (!loadedRecorridos[name].config) {
                                 loadedRecorridos[name].config = { durationIda: 30, durationVuelta: 30, pauseAfterIda: 5, pauseAfterVuelta: 15 };
-                            } else { // Check for pause properties if config exists
+                                migrated = true;
+                            } else {
                                 if (loadedRecorridos[name].config.pauseAfterIda === undefined) {
                                     loadedRecorridos[name].config.pauseAfterIda = 5;
+                                    migrated = true;
                                 }
                                 if (loadedRecorridos[name].config.pauseAfterVuelta === undefined) {
                                     loadedRecorridos[name].config.pauseAfterVuelta = 15;
+                                    migrated = true;
                                 }
                             }
                             if (!loadedRecorridos[name].timetables) {
                                 loadedRecorridos[name].timetables = { 'Default': [] };
+                                migrated = true;
                             }
                         }
                     }
                     recorridos = loadedRecorridos;
-                    saveRecorridosToStorage(); // Save back any migrated data
+
+                    if (migrated) {
+                        saveRecorridosToStorage(); // Save any migrated data back to the new key
+                    }
                 }
                 updateRecorridoSelector();
             }
 
             function saveRecorridosToStorage() {
-                localStorage.setItem('busRecorridos', JSON.stringify(recorridos));
+                const APP_KEY = 'smartmove_recorridos';
+                localStorage.setItem(APP_KEY, JSON.stringify(recorridos));
             }
 
             // --- GESTIÓN DE RECORRIDOS Y PUNTOS ---
@@ -402,14 +470,14 @@
                 } else {
                     points.forEach((point, index) => {
                         const li = document.createElement('li');
-                        li.className = 'flex justify-between items-center bg-white p-2 rounded-md shadow-sm';
+                        li.className = 'flex justify-between items-center bg-gray-800 text-gray-200 p-2 rounded-md shadow-sm';
                         const icon = point.type === 'stop' ? '🅿️' : '➡️';
                         const name = point.name || (point.type === 'stop' ? `Parada ${index + 1}` : `Punto ${index + 1}`);
                         li.innerHTML = `
-                            <span>${icon} ${name}</span>
-                            <div>
-                                <button title="Editar Punto" class="stop-item-btn edit-stop-btn text-blue-600" data-index="${index}"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
-                                <button title="Eliminar Punto" class="stop-item-btn delete-stop-btn text-red-600" data-index="${index}"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
+                            <span class="truncate">${icon} ${name}</span>
+                            <div class="flex-shrink-0">
+                                <button title="Editar Punto" class="stop-item-btn edit-stop-btn text-blue-400 hover:text-blue-300" data-index="${index}"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" /><path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" /></svg></button>
+                                <button title="Eliminar Punto" class="stop-item-btn delete-stop-btn text-red-400 hover:text-red-300" data-index="${index}"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg></button>
                             </div>`;
                         stopsList.appendChild(li);
                     });
@@ -647,7 +715,7 @@
                 tripList.innerHTML = ''; // Clear previous list
                 timetable.forEach(leg => {
                     const button = document.createElement('button');
-                    button.className = 'w-full text-left p-3 bg-gray-100 hover:bg-gray-200 rounded-md';
+                    button.className = 'w-full text-left p-3 bg-gray-800 hover:bg-gray-700 rounded-md text-gray-200';
                     const banderaText = leg.bandera === 'ida' ? 'Ida' : 'Vuelta';
                     button.textContent = `Vuelta ${leg.lap} (${banderaText}) - Inicio: ${leg.startTime}`;
 
@@ -988,11 +1056,11 @@
                 }
 
                 const list = document.createElement('ul');
-                list.className = 'space-y-2 bg-gray-50 p-3 rounded-md h-32 overflow-y-auto';
+                list.className = 'space-y-2 bg-gray-800 p-3 rounded-md h-32 overflow-y-auto';
 
                 timetable.forEach(leg => {
                     const li = document.createElement('li');
-                    li.className = 'text-sm text-gray-800';
+                    li.className = 'text-sm text-gray-300';
                     const banderaText = leg.bandera === 'ida' ? 'Ida' : 'Vuelta';
                     li.textContent = `Vuelta ${leg.lap} (${banderaText}): ${leg.startTime} (${leg.duration} min)`;
                     list.appendChild(li);
